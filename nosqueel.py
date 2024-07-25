@@ -2,7 +2,7 @@ import pickle
 import sqlite3
 from pathlib import Path
 from sqlite3 import Connection, IntegrityError
-from typing import Any
+from typing import Any, Union, List
 
 
 def _encode(x: Any) -> bytes:
@@ -14,7 +14,7 @@ def _decode(x: Any) -> bytes:
 
 
 class KeyValueDB:
-    def __init__(self, path: str | Path, wal_mode: bool = True):
+    def __init__(self, path: Union[str, Path], wal_mode: bool = True):
         if isinstance(path, str):
             path = Path(path)
 
@@ -93,7 +93,7 @@ class KeyValueDB:
             cursor.execute("delete from data where key = ?", (kp,))
             conn.commit()
 
-    def search(self, value: Any) -> list[Any]:
+    def search(self, value: Any) -> List[Any]:
         vp = _encode(value)
         with self._get_conn() as conn:
             cursor = conn.cursor()
@@ -104,7 +104,7 @@ class KeyValueDB:
                 return data
             return []
 
-    def keys(self) -> list[Any]:
+    def keys(self) -> List[Any]:
         with self._get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("select key from data")
