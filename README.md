@@ -1,11 +1,12 @@
 # nosqueel
 
-Lightweight NoSQL key-value database for simple and practical uses. 
-Uses SQLite as its engine, thereby benefiting from its power, integrity, and practicality.
+A lightweight, file-based NoSQL key-value database designed for simple and practical uses. It requires no external dependencies and stores all data locally in a single file. Perfect for applications needing a straightforward and efficient storage solution.
 
 ```bash
 pip install nosqueel
 ```
+# How it works
+nosqueel uses sqlite3 as its engine, thereby benefiting from its power, integrity, and practicality. This looks strange but it works like a charm.
 
 # Usage
 
