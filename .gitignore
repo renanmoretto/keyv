@@ -14,8 +14,9 @@ __pypackages__/
 *.txt
 *.csv
 ignore_*
+_ignore*
 .coverage
 htmlcov
 test.py
 .idea
-/temp/
+temp/
