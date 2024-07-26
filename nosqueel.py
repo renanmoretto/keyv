@@ -19,11 +19,13 @@ class NoSqueel:
         path: Union[str, Path],
         wal_mode: bool = True,
         synchronous: int = 1,
+        **kwargs,
     ):
         if isinstance(path, str):
             path = Path(path)
 
         self.path = path
+        self._sqlite_kwargs = kwargs
         self._wal_mode = wal_mode
         self._synchronous = synchronous
         self._conn: Connection | None = None
@@ -37,7 +39,11 @@ class NoSqueel:
 
     def _get_conn(self):
         if self._conn is None:
-            self._conn = sqlite3.connect(self.path, check_same_thread=False)
+            self._conn = sqlite3.connect(
+                self.path,
+                check_same_thread=False,
+                **self._sqlite_kwargs,
+            )
         return self._conn
 
     def _init(self):
