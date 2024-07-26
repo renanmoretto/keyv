@@ -92,8 +92,8 @@ class NoSqueel:
 
     def update(self, key: Any, value: Any):
         # TODO
-        # raises an good error key does not exists
-        # option to create key if it does not exists
+        # raises an good error key if does not exists
+        # also option to create the key and not raise the error
         kp = _encode(key)
         vp = _encode(value)
         with self._get_conn() as conn:
