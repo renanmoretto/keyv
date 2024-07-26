@@ -2,14 +2,14 @@ import unittest
 import tempfile
 import shutil
 from pathlib import Path
-from nosqueel import KeyValueDB
+from nosqueel import NoSqueel
 
 
-class TestKeyValueDB(unittest.TestCase):
+class TestNoSqueel(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
         self.db_path = Path(self.test_dir) / "test.db"
-        self.db = KeyValueDB(self.db_path)
+        self.db = NoSqueel(self.db_path)
 
     def tearDown(self):
         if self.db._conn:

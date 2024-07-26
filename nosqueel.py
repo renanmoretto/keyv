@@ -13,13 +13,19 @@ def _decode(x: Any) -> bytes:
     return pickle.loads(x)
 
 
-class KeyValueDB:
-    def __init__(self, path: Union[str, Path], wal_mode: bool = True):
+class NoSqueel:
+    def __init__(
+        self,
+        path: Union[str, Path],
+        wal_mode: bool = True,
+        synchronous: int = 1,
+    ):
         if isinstance(path, str):
             path = Path(path)
 
         self.path = path
         self._wal_mode = wal_mode
+        self._synchronous = synchronous
         self._conn: Connection | None = None
         self._create_dir_if_not_exists()
         self._init()
@@ -34,27 +40,24 @@ class KeyValueDB:
             self._conn = sqlite3.connect(self.path, check_same_thread=False)
         return self._conn
 
-    def _ensure_wal_mode(self):
-        with self._get_conn() as conn:
-            cursor = conn.cursor()
-            cursor.execute("PRAGMA journal_mode=WAL;")
-            current_mode = cursor.fetchone()[0]
-            i = 0
-            while current_mode != "wal":
-                if i > 10:
-                    raise RuntimeError("error trying to setting wal mode")
-                cursor.execute("PRAGMA journal_mode=WAL;")
-                current_mode = cursor.fetchone()[0]
-                i += 1
-            conn.commit()
-
     def _init(self):
         conn = self._get_conn()
+        cursor = conn.cursor()
+        if self._wal_mode:
+            cursor.execute("PRAGMA journal_mode=WAL;")
+        cursor.execute(f"PRAGMA synchronous={self._synchronous};")
+        conn.commit()
+
+        # Creates base table
         conn.execute("create table if not exists data (key blob unique, value blob)")
         conn.execute("create unique index if not exists idx_key on data(key)")
         conn.commit()
 
-        self._ensure_wal_mode()
+        # self._ensure_wal_mode()
+
+    def close(self):
+        """Closes the database connection"""
+        self._get_conn().close()
 
     def put(self, key: Any, value: Any):
         kp = _encode(key)
