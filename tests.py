@@ -8,7 +8,7 @@ from nosqueel import NoSqueel
 class TestNoSqueel(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
-        self.db_path = Path(self.test_dir) / "test.db"
+        self.db_path = Path(self.test_dir) / "db.nosqueel"
         self.db = NoSqueel(self.db_path)
 
     def tearDown(self):
