@@ -65,7 +65,7 @@ class NoSqueel:
         """Closes the database connection"""
         self._get_conn().close()
 
-    def put(self, key: Any, value: Any):
+    def put(self, key: Any, value: Any, replace_if_exists: bool = False):
         kp = _encode(key)
         vp = _encode(value)
         with self._get_conn() as conn:
@@ -73,6 +73,9 @@ class NoSqueel:
             try:
                 cursor.execute("insert into data (key, value) values (?, ?)", (kp, vp))
             except IntegrityError:
+                if replace_if_exists:
+                    self.update(key, value)
+                    return
                 raise ValueError(f"key {key} already exists")
             conn.commit()
 
@@ -88,6 +91,9 @@ class NoSqueel:
             return None
 
     def update(self, key: Any, value: Any):
+        # TODO
+        # raises an good error key does not exists
+        # option to create key if it does not exists
         kp = _encode(key)
         vp = _encode(value)
         with self._get_conn() as conn:

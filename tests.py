@@ -28,6 +28,19 @@ class TestNoSqueel(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.db.put(key, "value2")
 
+    def test_put_replace_if_exists_true(self):
+        key = "key1"
+        initial_value = 0
+        new_value = 1
+
+        self.db.put(key, initial_value)
+        retrieved_value = self.db.get(key)
+        self.assertEqual(retrieved_value, initial_value)
+
+        self.db.put(key, new_value, replace_if_exists=True)
+        retrieved_value = self.db.get(key)
+        self.assertEqual(retrieved_value, new_value)
+
     def test_update(self):
         key, value = "key1", "value1"
         new_value = "new_value1"
