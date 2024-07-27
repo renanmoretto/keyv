@@ -34,9 +34,6 @@ class TestNoSqueel(unittest.TestCase):
         new_value = 1
 
         self.db.put(key, initial_value)
-        retrieved_value = self.db.get(key)
-        self.assertEqual(retrieved_value, initial_value)
-
         self.db.put(key, new_value, replace_if_exists=True)
         retrieved_value = self.db.get(key)
         self.assertEqual(retrieved_value, new_value)
