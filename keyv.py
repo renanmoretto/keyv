@@ -13,7 +13,7 @@ def _decode(x: Any) -> bytes:
     return pickle.loads(x)
 
 
-class NoSqueel:
+class KeyV:
     def __init__(
         self,
         path: Union[str, Path],

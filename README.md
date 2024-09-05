@@ -53,7 +53,6 @@ print(all_keys)  # output: ['key2', 'key3']
 Nosqueel uses pickle to serialize data (keys and values). This means you are free to use any python type that can be serialized using pickle for both keys and values.
 
 ### Roadmap
-- [ ] option to not serialize
 - [ ] tables
 - [ ] begin immediate transaction (for better locking)
 - [ ] clean code/make it more efficient
