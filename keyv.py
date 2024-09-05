@@ -13,21 +13,21 @@ def _decode(x: Any) -> bytes:
     return pickle.loads(x)
 
 
-class KeyV:
+class KeyVDatabase:
     def __init__(
         self,
         path: Union[str, Path],
-        wal_mode: bool = True,
-        synchronous: int = 1,
+        init_command: str,
+        isolation_level: str,
         **kwargs,
     ):
         if isinstance(path, str):
             path = Path(path)
 
         self.path = path
+        self._init_command = init_command
         self._sqlite_kwargs = kwargs
-        self._wal_mode = wal_mode
-        self._synchronous = synchronous
+        self._isolation_level = isolation_level
         self._conn: Connection | None = None
         self._create_dir_if_not_exists()
         self._init()
@@ -42,6 +42,7 @@ class KeyV:
             self._conn = sqlite3.connect(
                 self.path,
                 check_same_thread=False,
+                isolation_level=self._isolation_level,
                 **self._sqlite_kwargs,
             )
         return self._conn
@@ -49,14 +50,14 @@ class KeyV:
     def _init(self):
         conn = self._get_conn()
         cursor = conn.cursor()
-        if self._wal_mode:
-            cursor.execute("PRAGMA journal_mode=WAL;")
-        cursor.execute(f"PRAGMA synchronous={self._synchronous};")
+        commands = self._init_command.split(';')
+        for command in commands:
+            cursor.execute(command)
         conn.commit()
 
         # Creates base table
-        conn.execute("create table if not exists data (key blob unique, value blob)")
-        conn.execute("create unique index if not exists idx_key on data(key)")
+        conn.execute('create table if not exists data (key blob unique, value blob)')
+        conn.execute('create unique index if not exists idx_key on data(key)')
         conn.commit()
 
         # self._ensure_wal_mode()
@@ -71,19 +72,19 @@ class KeyV:
         with self._get_conn() as conn:
             cursor = conn.cursor()
             try:
-                cursor.execute("insert into data (key, value) values (?, ?)", (kp, vp))
+                cursor.execute('insert into data (key, value) values (?, ?)', (kp, vp))
             except IntegrityError:
                 if replace_if_exists:
                     self.update(key, value)
                     return
-                raise ValueError(f"key {key} already exists")
+                raise ValueError(f'key {key} already exists')
             conn.commit()
 
     def get(self, key: Any) -> Any:
         kp = _encode(key)
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("select value from data where key = ?", (kp,))
+            cursor.execute('select value from data where key = ?', (kp,))
             result = cursor.fetchone()
             if result:
                 vp = result[0]
@@ -98,21 +99,21 @@ class KeyV:
         vp = _encode(value)
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("update data set value = ? where key = ?", (vp, kp))
+            cursor.execute('update data set value = ? where key = ?', (vp, kp))
             conn.commit()
 
     def delete(self, key: Any):
         kp = _encode(key)
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("delete from data where key = ?", (kp,))
+            cursor.execute('delete from data where key = ?', (kp,))
             conn.commit()
 
     def search(self, value: Any) -> List[Any]:
         vp = _encode(value)
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("select key from data where value = ?", (vp,))
+            cursor.execute('select key from data where value = ?', (vp,))
             result = cursor.fetchall()
             if result:
                 data = [_decode(row[0]) for row in result]
@@ -122,9 +123,33 @@ class KeyV:
     def keys(self) -> List[Any]:
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("select key from data")
+            cursor.execute('select key from data')
             result = cursor.fetchall()
             if result:
                 data = [_decode(row[0]) for row in result]
                 return data
             return []
+
+
+def connect(
+    path: Union[str, Path],
+    init_command: str | None = None,
+    isolation_level: str = 'IMMEDIATE',
+) -> KeyVDatabase:
+    """Returns a new KeyVDatabase instance
+
+    args:
+        path: Path to the database file.
+
+        init_command:
+            SQL command/pragmas to initialize the database.
+            defaults to: 'PRAGMA journal_mode=WAL;PRAGMA synchronous=1;'
+
+        isolation_level: SQLite isolation level.
+
+    returns:
+        A new KeyVDatabase instance.
+    """
+    if init_command is None:
+        init_command = 'PRAGMA journal_mode=WAL; PRAGMA synchronous=1;'
+    return KeyVDatabase(path, init_command, isolation_level)
