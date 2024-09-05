@@ -1,20 +1,20 @@
-# nosqueel
+# keyv
 
 A lightweight, file-based NoSQL key-value database designed for simple and practical uses. It requires no external dependencies and stores all data locally in a single file. Perfect for applications needing a straightforward and efficient storage solution.
 
 ```bash
-pip install nosqueel
+pip install keyv
 ```
 # How it works
-nosqueel uses sqlite3 as its engine, thereby benefiting from its power, integrity, and practicality. This looks strange but it works like a charm.
+keyv uses sqlite3 as its engine, thereby benefiting from its power, integrity, and practicality. This looks strange but it works like a charm.
 
 # Usage
 
 ```python
-from nosqueel import NoSqueel
+import keyv
 
 # initialize the database
-db = NoSqueel('db.nosqueel') # or .db, or .anything, you choose
+db = keyv.connect('db.keyv') # or .db, or .anything, you choose
 ```
 ###
 ```python
@@ -50,7 +50,7 @@ all_keys = db.keys()
 print(all_keys)  # output: ['key2', 'key3']
 ```
 ###
-Nosqueel uses pickle to serialize data (keys and values). This means you are free to use any python type that can be serialized using pickle for both keys and values.
+keyv uses pickle to serialize data (keys and values). This means you are free to use any python type that can be serialized using pickle for both keys and values.
 
 ### Roadmap
 - [ ] tables
