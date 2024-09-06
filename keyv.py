@@ -22,7 +22,7 @@ class Collection:
     def __init__(self, db: KeyVDatabase, name: str, use_pickle: bool):
         self.db = db
         self.name = name
-        self.use_pickle = use_pickle
+        self._use_pickle = use_pickle
 
     def _execute_sql(
         self,
@@ -44,7 +44,7 @@ class Collection:
                 return
             raise ValueError(f'key {key} already exists')
 
-        if self.use_pickle:
+        if self._use_pickle:
             key = _encode(key)
             value = _encode(value)
 
@@ -55,7 +55,7 @@ class Collection:
         )
 
     def get(self, key: Any) -> Any:
-        if self.use_pickle:
+        if self._use_pickle:
             key = _encode(key)
 
         result = self._execute_sql(
@@ -64,12 +64,12 @@ class Collection:
 
         if result:
             value = result[0][0]
-            return _decode(value) if self.use_pickle else value
+            return _decode(value) if self._use_pickle else value
 
         return None
 
     def update(self, key: Any, value: Any):
-        if self.use_pickle:
+        if self._use_pickle:
             key = _encode(key)
             value = _encode(value)
 
@@ -80,20 +80,20 @@ class Collection:
         )
 
     def delete(self, key: Any):
-        if self.use_pickle:
+        if self._use_pickle:
             key = _encode(key)
 
         self._execute_sql(f'delete from {self.name} where key = ?', (key,), commit=True)
 
     def search(self, value: Any) -> List[Any]:
-        if self.use_pickle:
+        if self._use_pickle:
             value = _encode(value)
 
         result = self._execute_sql(
             f'select key from {self.name} where value = ?', (value,)
         )
         if result:
-            if self.use_pickle:
+            if self._use_pickle:
                 data = [_decode(row[0]) for row in result]
             else:
                 data = [row[0] for row in result]
@@ -103,7 +103,7 @@ class Collection:
     def keys(self) -> List[Any]:
         result = self._execute_sql(f'select key from {self.name}')
         if result:
-            if self.use_pickle:
+            if self._use_pickle:
                 data = [_decode(row[0]) for row in result]
             else:
                 data = [row[0] for row in result]
@@ -113,7 +113,7 @@ class Collection:
     def values(self) -> List[Any]:
         result = self._execute_sql(f'select value from {self.name}')
         if result:
-            if self.use_pickle:
+            if self._use_pickle:
                 data = [_decode(row[0]) for row in result]
             else:
                 data = [row[0] for row in result]
@@ -121,7 +121,7 @@ class Collection:
         return []
 
     def key_exists(self, key: Any) -> bool:
-        if self.use_pickle:
+        if self._use_pickle:
             key = _encode(key)
 
         sql = f'select count(*) from {self.name} where key = ?'
@@ -206,6 +206,9 @@ class KeyVDatabase:
     def values(self) -> List[Any]:
         return self.from_(_DEFAULT_COLLECTION_NAME).values()
 
+    def key_exists(self, key: Any) -> bool:
+        return self.from_(_DEFAULT_COLLECTION_NAME).key_exists(key)
+
     def from_(
         self,
         collection_name: str,
@@ -217,7 +220,14 @@ class KeyVDatabase:
             use_pickle=self._use_pickle,
         )
 
-    def create_collection(self, name: str, use_pickle: bool = True) -> Collection:
+    def create_collection(
+        self,
+        name: str,
+        use_pickle: bool | None = None,
+    ) -> Collection:
+        if use_pickle is None:
+            use_pickle = self._use_pickle
+
         self._create_table_in_db(name=name)
         return self.collection(name=name, use_pickle=use_pickle)
 
@@ -225,8 +235,11 @@ class KeyVDatabase:
         self,
         name: str,
         create_if_not_exists: bool = True,
-        use_pickle: bool = True,
+        use_pickle: bool | None = None,
     ) -> Collection:
+        if use_pickle is None:
+            use_pickle = self._use_pickle
+
         if name in self.collections():
             return Collection(db=self, name=name, use_pickle=use_pickle)
 
