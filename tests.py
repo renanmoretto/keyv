@@ -6,11 +6,14 @@ import keyv
 from keyv import Collection
 
 
+USE_PICKLE = True
+
+
 class TestKeyV(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
         self.db_path = Path(self.test_dir) / 'test_db.db'
-        self.db = keyv.connect(self.db_path, use_pickle=True)
+        self.db = keyv.connect(self.db_path, use_pickle=USE_PICKLE)
 
     def tearDown(self):
         if self.db._conn:
@@ -182,4 +185,7 @@ class TestKeyV(unittest.TestCase):
 
 
 if __name__ == '__main__':
+    unittest.main()
+    global USE_PICKLE
+    USE_PICKLE = False
     unittest.main()
