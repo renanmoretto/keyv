@@ -199,6 +199,7 @@ class KeyVDatabase:
         return self._main_collection.values()
 
     def from_(self, collection_name: str) -> Collection:
+        # TODO
         ...
 
 
