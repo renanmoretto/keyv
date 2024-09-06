@@ -8,8 +8,8 @@ import keyv
 class TestKeyV(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
-        self.db_path = Path(self.test_dir) / 'db.KeyV'
-        self.db = keyv.connect(self.db_path)
+        self.db_path = Path(self.test_dir) / 'test_db.db'
+        self.db = keyv.connect(self.db_path, use_pickle=True)
 
     def tearDown(self):
         if self.db._conn:
@@ -29,14 +29,9 @@ class TestKeyV(unittest.TestCase):
             self.db.put(key, 'value2')
 
     def test_put_replace_if_exists_true(self):
-        key = 'key1'
-        initial_value = 0
-        new_value = 1
-
-        self.db.put(key, initial_value)
-        self.db.put(key, new_value, replace_if_exists=True)
-        retrieved_value = self.db.get(key)
-        self.assertEqual(retrieved_value, new_value)
+        self.db.put('k1', 'old')
+        self.db.put('k1', 'new', replace_if_exists=True)
+        self.assertEqual(self.db.get('k1'), 'new')
 
     def test_update(self):
         key, value = 'key1', 'value1'
