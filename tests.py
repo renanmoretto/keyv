@@ -6,7 +6,7 @@ import keyv
 from keyv import Collection
 
 
-USE_PICKLE = True
+USE_PICKLE = False
 
 
 class TestKeyV(unittest.TestCase):
@@ -185,7 +185,7 @@ class TestKeyV(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
-    global USE_PICKLE
     USE_PICKLE = False
+    unittest.main(exit=False)
+    USE_PICKLE = True
     unittest.main()
