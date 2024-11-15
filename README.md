@@ -60,7 +60,7 @@ Here's how you can use them:
 
 ```python
 # Create a new collection
-collection = db.create_collection('my_collection')
+collection = db.collection('my_collection')
 
 # Insert a key-value pair into the collection
 collection.put('key1', 'value1')
