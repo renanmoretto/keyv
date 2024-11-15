@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "keyv"
 version = "0.1.3"
-description = ""
+description = "A lightweight, file-based NoSQL key-value database using sqlite3, designed for simple and practical uses without external dependencies."
 authors = ["renanmoretto <himynameisrenan@outlook.com>"]
 readme = "README.md"
 

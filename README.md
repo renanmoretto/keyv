@@ -53,3 +53,45 @@ db.keys()
 keyv uses pickle to serialize data (keys and values). This means you are free to use any python type that can be serialized by pickle for both keys and values.
 
 # Collections
+
+Collections allow you to organize your data into separate namespaces within the same database file.
+In practice, they are tables inside the SQLite file.
+Here's how you can use them:
+
+```python
+# Create a new collection
+collection = db.create_collection('my_collection')
+
+# Insert a key-value pair into the collection
+collection.put('key1', 'value1')
+
+# Retrieve a value by key from the collection
+collection.get('key1')
+# Output: 'value1'
+
+# Update a value in the collection
+collection.update('key1', 'new_value')
+
+# Check if a key exists in the collection
+collection.key_exists('key1')
+# Output: True
+
+# Delete a key-value pair from the collection
+collection.delete('key1')
+
+# Search for keys by value in the collection
+collection.put('key2', 'common_value')
+collection.put('key3', 'common_value')
+collection.search('common_value')
+# Output: ['key2', 'key3']
+
+# Retrieve all keys in the collection
+collection.keys()
+# Output: ['key2', 'key3']
+
+# Retrieve all values in the collection
+collection.values()
+# Output: ['common_value', 'common_value']
+```
+
+Collections provide a flexible way to manage different sets of data within the same database, making it easier to organize and access your data efficiently.
