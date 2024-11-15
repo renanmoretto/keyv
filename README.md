@@ -27,14 +27,14 @@ db.put('key1', 'value1')
 db.put('key1', 'value1', replace_if_exists=True)
 
 # retrieve a value by key
-value = db.get('key1')
-print(value)  # output: 'value1'
+db.get('key1')
+# output: 'value1'
 # note: the get method returns None for non-existing keys
 
 # update a value
 db.update('key1', 123)
-updated_value = db.get('key1')
-print(updated_value)  # output: 123
+db.get('key1')
+# output: 123
 
 # delete a key-value pair
 db.delete('key1')
@@ -42,12 +42,14 @@ db.delete('key1')
 # search for keys by value
 db.put('key2', 'common_value')
 db.put('key3', 'common_value')
-keys = db.search('common_value')
-print(keys)  # output: ['key2', 'key3']
+db.search('common_value')
+# output: ['key2', 'key3']
 
 # retrieve all keys
-all_keys = db.keys()
-print(all_keys)  # output: ['key2', 'key3']
+db.keys()
+# output: ['key2', 'key3']
 ```
 ###
-keyv uses pickle to serialize data (keys and values). This means you are free to use any python type that can be serialized using pickle for both keys and values.
+keyv uses pickle to serialize data (keys and values). This means you are free to use any python type that can be serialized by pickle for both keys and values.
+
+# Collections

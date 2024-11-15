@@ -3,7 +3,7 @@ from __future__ import annotations
 import pickle
 import sqlite3
 from pathlib import Path
-from sqlite3 import Connection, IntegrityError
+from sqlite3 import Connection
 from typing import Any, Union, List
 
 
@@ -38,6 +38,17 @@ class Collection:
             return cursor.fetchall()
 
     def put(self, key: Any, value: Any, replace_if_exists: bool = False):
+        """
+        Inserts a key-value pair into the collection.
+
+        Args:
+            key: The key to insert.
+            value: The value to associate with the key.
+            replace_if_exists: If True, replaces the value if the key already exists. Defaults to False.
+
+        Raises:
+            ValueError: If the key already exists and replace_if_exists is False.
+        """
         if self.key_exists(key):
             if replace_if_exists:
                 self.update(key, value)
@@ -55,6 +66,15 @@ class Collection:
         )
 
     def get(self, key: Any) -> Any:
+        """
+        Retrieves the value associated with the given key.
+
+        Args:
+            key: The key to look up.
+
+        Returns:
+            The value associated with the key, or None if the key does not exist.
+        """
         if self._use_pickle:
             key = _encode(key)
 
@@ -69,6 +89,13 @@ class Collection:
         return None
 
     def update(self, key: Any, value: Any):
+        """
+        Updates the value associated with the given key.
+
+        Args:
+            key: The key to update.
+            value: The new value to associate with the key.
+        """
         if self._use_pickle:
             key = _encode(key)
             value = _encode(value)
@@ -80,12 +107,27 @@ class Collection:
         )
 
     def delete(self, key: Any):
+        """
+        Deletes the key-value pair associated with the given key.
+
+        Args:
+            key: The key to delete.
+        """
         if self._use_pickle:
             key = _encode(key)
 
         self._execute_sql(f'delete from {self.name} where key = ?', (key,), commit=True)
 
     def search(self, value: Any) -> List[Any]:
+        """
+        Searches for keys associated with the given value.
+
+        Args:
+            value: The value to search for.
+
+        Returns:
+            A list of keys associated with the value.
+        """
         if self._use_pickle:
             value = _encode(value)
 
@@ -101,6 +143,12 @@ class Collection:
         return []
 
     def keys(self) -> List[Any]:
+        """
+        Retrieves all keys in the collection.
+
+        Returns:
+            A list of all keys in the collection.
+        """
         result = self._execute_sql(f'select key from {self.name}')
         if result:
             if self._use_pickle:
@@ -111,6 +159,12 @@ class Collection:
         return []
 
     def values(self) -> List[Any]:
+        """
+        Retrieves all values in the collection.
+
+        Returns:
+            A list of all values in the collection.
+        """
         result = self._execute_sql(f'select value from {self.name}')
         if result:
             if self._use_pickle:
@@ -121,6 +175,15 @@ class Collection:
         return []
 
     def key_exists(self, key: Any) -> bool:
+        """
+        Checks if a key exists in the collection.
+
+        Args:
+            key: The key to check.
+
+        Returns:
+            True if the key exists, False otherwise.
+        """
         if self._use_pickle:
             key = _encode(key)
 
@@ -182,31 +245,96 @@ class KeyVDatabase:
         conn.commit()
 
     def close(self):
-        """Closes the database connection"""
+        """
+        Closes the database connection.
+        """
         self._get_conn().close()
 
     def put(self, key: Any, value: Any, replace_if_exists: bool = False):
+        """
+        Inserts a key-value pair into the default collection.
+
+        Args:
+            key: The key to insert.
+            value: The value to associate with the key.
+            replace_if_exists: If True, replaces the value if the key already exists. Defaults to False.
+
+        Raises:
+            ValueError: If the key already exists and replace_if_exists is False.
+        """
         self.from_(_DEFAULT_COLLECTION_NAME).put(key, value, replace_if_exists)
 
     def get(self, key: Any) -> Any:
+        """
+        Retrieves the value associated with the given key from the default collection.
+
+        Args:
+            key: The key to look up.
+
+        Returns:
+            The value associated with the key, or None if the key does not exist.
+        """
         return self.from_(_DEFAULT_COLLECTION_NAME).get(key)
 
     def update(self, key: Any, value: Any):
+        """
+        Updates the value associated with the given key in the default collection.
+
+        Args:
+            key: The key to update.
+            value: The new value to associate with the key.
+        """
         self.from_(_DEFAULT_COLLECTION_NAME).update(key, value)
 
     def delete(self, key: Any):
+        """
+        Deletes the key-value pair associated with the given key from the default collection.
+
+        Args:
+            key: The key to delete.
+        """
         self.from_(_DEFAULT_COLLECTION_NAME).delete(key)
 
     def search(self, value: Any) -> List[Any]:
+        """
+        Searches for keys associated with the given value in the default collection.
+
+        Args:
+            value: The value to search for.
+
+        Returns:
+            A list of keys associated with the value.
+        """
         return self.from_(_DEFAULT_COLLECTION_NAME).search(value)
 
     def keys(self) -> List[Any]:
+        """
+        Retrieves all keys in the default collection.
+
+        Returns:
+            A list of all keys in the default collection.
+        """
         return self.from_(_DEFAULT_COLLECTION_NAME).keys()
 
     def values(self) -> List[Any]:
+        """
+        Retrieves all values in the default collection.
+
+        Returns:
+            A list of all values in the default collection.
+        """
         return self.from_(_DEFAULT_COLLECTION_NAME).values()
 
     def key_exists(self, key: Any) -> bool:
+        """
+        Checks if a key exists in the default collection.
+
+        Args:
+            key: The key to check.
+
+        Returns:
+            True if the key exists, False otherwise.
+        """
         return self.from_(_DEFAULT_COLLECTION_NAME).key_exists(key)
 
     def from_(
@@ -214,6 +342,16 @@ class KeyVDatabase:
         collection_name: str,
         create_if_not_exists: bool = True,
     ) -> Collection:
+        """
+        Retrieves a collection by name, creating it if it does not exist.
+
+        Args:
+            collection_name: The name of the collection.
+            create_if_not_exists: If True, creates the collection if it does not exist. Defaults to True.
+
+        Returns:
+            The collection instance.
+        """
         return self.collection(
             collection_name,
             create_if_not_exists=create_if_not_exists,
@@ -225,6 +363,16 @@ class KeyVDatabase:
         name: str,
         use_pickle: bool | None = None,
     ) -> Collection:
+        """
+        Creates a new collection in the database.
+
+        Args:
+            name: The name of the collection.
+            use_pickle: If True, uses pickle for serialization. Defaults to the database's use_pickle setting.
+
+        Returns:
+            The newly created collection instance.
+        """
         if use_pickle is None:
             use_pickle = self._use_pickle
 
@@ -237,6 +385,20 @@ class KeyVDatabase:
         create_if_not_exists: bool = True,
         use_pickle: bool | None = None,
     ) -> Collection:
+        """
+        Retrieves a collection by name, optionally creating it if it does not exist.
+
+        Args:
+            name: The name of the collection.
+            create_if_not_exists: If True, creates the collection if it does not exist. Defaults to True.
+            use_pickle: If True, uses pickle for serialization. Defaults to the database's use_pickle setting.
+
+        Returns:
+            The collection instance.
+
+        Raises:
+            ValueError: If the collection does not exist and create_if_not_exists is False.
+        """
         if use_pickle is None:
             use_pickle = self._use_pickle
 
@@ -249,7 +411,12 @@ class KeyVDatabase:
         raise ValueError(f'collection {name} does not exist')
 
     def collections(self) -> List[str]:
-        """Executes SQL query to get all tables in the sqlite database"""
+        """
+        Retrieves the names of all collections in the database.
+
+        Returns:
+            A list of collection names.
+        """
         with self._get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
