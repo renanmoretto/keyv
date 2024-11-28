@@ -1,28 +1,18 @@
 from __future__ import annotations
 
-import pickle
 import sqlite3
 from pathlib import Path
 from sqlite3 import Connection
 from typing import Any, Union, List
 
 
-_DEFAULT_COLLECTION_NAME = 'main'
-
-
-def _encode(x: Any) -> bytes:
-    return pickle.dumps(x)
-
-
-def _decode(x: Any) -> bytes:
-    return pickle.loads(x)
+_DEFAULT_COLLECTION_NAME = '__main__'
 
 
 class Collection:
-    def __init__(self, db: KeyVDatabase, name: str, use_pickle: bool):
+    def __init__(self, db: KeyVDatabase, name: str):
         self.db = db
         self.name = name
-        self._use_pickle = use_pickle
 
     def _execute_sql(
         self,
@@ -55,10 +45,6 @@ class Collection:
                 return
             raise ValueError(f'key {key} already exists')
 
-        if self._use_pickle:
-            key = _encode(key)
-            value = _encode(value)
-
         self._execute_sql(
             f'insert into {self.name} (key, value) values (?, ?)',
             (key, value),
@@ -75,18 +61,10 @@ class Collection:
         Returns:
             The value associated with the key, or None if the key does not exist.
         """
-        if self._use_pickle:
-            key = _encode(key)
-
         result = self._execute_sql(
             f'select value from {self.name} where key = ?', (key,)
         )
-
-        if result:
-            value = result[0][0]
-            return _decode(value) if self._use_pickle else value
-
-        return None
+        return result[0][0] if result else None
 
     def update(self, key: Any, value: Any):
         """
@@ -96,10 +74,6 @@ class Collection:
             key: The key to update.
             value: The new value to associate with the key.
         """
-        if self._use_pickle:
-            key = _encode(key)
-            value = _encode(value)
-
         self._execute_sql(
             f'update {self.name} set value = ? where key = ?',
             (value, key),
@@ -113,9 +87,6 @@ class Collection:
         Args:
             key: The key to delete.
         """
-        if self._use_pickle:
-            key = _encode(key)
-
         self._execute_sql(f'delete from {self.name} where key = ?', (key,), commit=True)
 
     def search(self, value: Any) -> List[Any]:
@@ -128,18 +99,11 @@ class Collection:
         Returns:
             A list of keys associated with the value.
         """
-        if self._use_pickle:
-            value = _encode(value)
-
         result = self._execute_sql(
             f'select key from {self.name} where value = ?', (value,)
         )
         if result:
-            if self._use_pickle:
-                data = [_decode(row[0]) for row in result]
-            else:
-                data = [row[0] for row in result]
-            return data
+            return [row[0] for row in result]
         return []
 
     def keys(self) -> List[Any]:
@@ -151,11 +115,7 @@ class Collection:
         """
         result = self._execute_sql(f'select key from {self.name}')
         if result:
-            if self._use_pickle:
-                data = [_decode(row[0]) for row in result]
-            else:
-                data = [row[0] for row in result]
-            return data
+            return [row[0] for row in result]
         return []
 
     def values(self) -> List[Any]:
@@ -167,11 +127,7 @@ class Collection:
         """
         result = self._execute_sql(f'select value from {self.name}')
         if result:
-            if self._use_pickle:
-                data = [_decode(row[0]) for row in result]
-            else:
-                data = [row[0] for row in result]
-            return data
+            return [row[0] for row in result]
         return []
 
     def key_exists(self, key: Any) -> bool:
@@ -184,9 +140,6 @@ class Collection:
         Returns:
             True if the key exists, False otherwise.
         """
-        if self._use_pickle:
-            key = _encode(key)
-
         sql = f'select count(*) from {self.name} where key = ?'
         result = self._execute_sql(sql, (key,))
         return result[0][0] > 0
@@ -198,7 +151,6 @@ class KeyVDatabase:
         path: Union[str, Path],
         init_command: str,
         isolation_level: str,
-        use_pickle: bool = True,
         **kwargs,
     ):
         if isinstance(path, str):
@@ -209,11 +161,10 @@ class KeyVDatabase:
         self._sqlite_kwargs = kwargs
         self._isolation_level = isolation_level
         self._conn: Connection | None = None
-        self._use_pickle = use_pickle
 
         self._create_dir_if_not_exists()
         self._init()
-        self.create_collection(_DEFAULT_COLLECTION_NAME, self._use_pickle)
+        self.create_collection(_DEFAULT_COLLECTION_NAME)
 
     def _create_dir_if_not_exists(self):
         parents = self.path.parent
@@ -355,35 +306,28 @@ class KeyVDatabase:
         return self.collection(
             collection_name,
             create_if_not_exists=create_if_not_exists,
-            use_pickle=self._use_pickle,
         )
 
     def create_collection(
         self,
         name: str,
-        use_pickle: bool | None = None,
     ) -> Collection:
         """
         Creates a new collection in the database.
 
         Args:
             name: The name of the collection.
-            use_pickle: If True, uses pickle for serialization. Defaults to the database's use_pickle setting.
 
         Returns:
             The newly created collection instance.
         """
-        if use_pickle is None:
-            use_pickle = self._use_pickle
-
         self._create_table_in_db(name=name)
-        return self.collection(name=name, use_pickle=use_pickle)
+        return self.collection(name=name)
 
     def collection(
         self,
         name: str,
         create_if_not_exists: bool = True,
-        use_pickle: bool | None = None,
     ) -> Collection:
         """
         Retrieves a collection by name, optionally creating it if it does not exist.
@@ -391,7 +335,6 @@ class KeyVDatabase:
         Args:
             name: The name of the collection.
             create_if_not_exists: If True, creates the collection if it does not exist. Defaults to True.
-            use_pickle: If True, uses pickle for serialization. Defaults to the database's use_pickle setting.
 
         Returns:
             The collection instance.
@@ -399,14 +342,11 @@ class KeyVDatabase:
         Raises:
             ValueError: If the collection does not exist and create_if_not_exists is False.
         """
-        if use_pickle is None:
-            use_pickle = self._use_pickle
-
         if name in self.collections():
-            return Collection(db=self, name=name, use_pickle=use_pickle)
+            return Collection(db=self, name=name)
 
         if create_if_not_exists:
-            return self.create_collection(name=name, use_pickle=use_pickle)
+            return self.create_collection(name=name)
 
         raise ValueError(f'collection {name} does not exist')
 
@@ -427,7 +367,6 @@ def connect(
     path: Union[str, Path],
     init_command: str | None = None,
     isolation_level: str = 'IMMEDIATE',
-    use_pickle: bool = True,
 ) -> KeyVDatabase:
     """
     Returns a database instance
@@ -443,10 +382,6 @@ def connect(
             SQLite isolation level.
             defaults to: 'IMMEDIATE'
 
-        use_pickle:
-            If True, the library will use pickle to serialize and deserialize data.
-            If False, the library will store data as it is.
-
     returns:
         Database instance
     """
@@ -457,5 +392,4 @@ def connect(
         path=path,
         init_command=init_command,
         isolation_level=isolation_level,
-        use_pickle=use_pickle,
     )

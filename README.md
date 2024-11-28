@@ -49,8 +49,6 @@ db.search('common_value')
 db.keys()
 # output: ['key2', 'key3']
 ```
-###
-keyv uses pickle to serialize data (keys and values). This means you are free to use any python type that can be serialized by pickle for both keys and values.
 
 # Collections
 

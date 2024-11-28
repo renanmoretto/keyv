@@ -6,14 +6,11 @@ import keyv
 from keyv import Collection
 
 
-USE_PICKLE = False
-
-
 class TestKeyV(unittest.TestCase):
     def setUp(self):
         self.test_dir = tempfile.mkdtemp()
         self.db_path = Path(self.test_dir) / 'test_db.db'
-        self.db = keyv.connect(self.db_path, use_pickle=USE_PICKLE)
+        self.db = keyv.connect(self.db_path)
 
     def tearDown(self):
         if self.db._conn:
@@ -75,14 +72,6 @@ class TestKeyV(unittest.TestCase):
         self.db.put('key1', 'value1')
         self.assertTrue(self.db.key_exists('key1'))
         self.assertFalse(self.db.key_exists('non_existent_key'))
-
-    def test_collection_use_pickle(self):
-        collection = self.db.collection('test_collection')
-        self.assertEqual(collection._use_pickle, self.db._use_pickle)
-
-    def test_create_collection_use_pickle(self):
-        collection = self.db.create_collection('test_collection')
-        self.assertEqual(collection._use_pickle, self.db._use_pickle)
 
     def test_collection_put_and_get(self):
         collection = self.db.create_collection('test_collection')
@@ -176,16 +165,6 @@ class TestKeyV(unittest.TestCase):
         self.assertEqual(collection.name, new_collection_name)
         self.assertIn(new_collection_name, self.db.collections())
 
-    # def test_close_and_reopen(self):
-    #     self.db.put('key1', 'value1')
-    #     self.db.close()
-    #     new_db = keyv.connect(self.db_path, use_pickle=True)
-    #     self.assertEqual(new_db.get('key1'), 'value1')
-    #     new_db.close()
-
 
 if __name__ == '__main__':
-    USE_PICKLE = False
-    unittest.main(exit=False)
-    USE_PICKLE = True
     unittest.main()
