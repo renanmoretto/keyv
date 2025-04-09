@@ -5,6 +5,7 @@ from pathlib import Path
 import keyv
 import json
 import pickle
+import sqlite3
 
 
 class TestClass:
@@ -341,6 +342,67 @@ class TestKeyV(unittest.TestCase):
         pickle_collection.set('json_in_pickle', test_dict, serializer='json')
         retrieved = pickle_collection.get('json_in_pickle', serializer='json')
         self.assertEqual(retrieved, test_dict)
+
+    def test_with_statement_basic(self):
+        """Test using a collection with a 'with' statement."""
+        with self.db.collection('with_test') as collection:
+            collection.set('key1', 'value1')
+            self.assertEqual(collection.get('key1'), 'value1')
+
+    def test_with_statement_auto_close(self):
+        """Test that the database connection is closed after exiting the with block."""
+        db_path = Path(self.test_dir) / 'with_db.db'
+        db = keyv.connect(db_path)
+
+        with db.collection('with_test') as collection:
+            collection.set('key1', 'value1')
+            self.assertIsNotNone(db._conn)
+            db._conn.execute('SELECT 1')
+
+        with self.assertRaises(sqlite3.ProgrammingError):
+            db._conn.execute('SELECT 1')
+
+    def test_with_statement_exception_handling(self):
+        """Test that the connection is closed even if an exception is raised in the with block."""
+        db_path = Path(self.test_dir) / 'exception_db.db'
+        db = keyv.connect(db_path)
+
+        try:
+            with db.collection('except_test') as collection:
+                collection.set('key1', 'value1')
+                db._conn.execute('SELECT 1')
+                raise ValueError('Test exception')
+        except ValueError:
+            pass
+
+        with self.assertRaises(sqlite3.ProgrammingError):
+            db._conn.execute('SELECT 1')
+
+    def test_with_statement_nested(self):
+        """Test using nested with statements with different collections."""
+        with self.db.collection('outer_collection') as outer:
+            outer.set('outer_key', 'outer_value')
+
+            inner_db_path = Path(self.test_dir) / 'inner_db.db'
+            inner_db = keyv.connect(inner_db_path)
+
+            with inner_db.collection('inner_collection') as inner:
+                inner.set('inner_key', 'inner_value')
+
+                self.assertEqual(outer.get('outer_key'), 'outer_value')
+                self.assertEqual(inner.get('inner_key'), 'inner_value')
+
+                outer_db_conn = self.db._conn
+                inner_db_conn = inner_db._conn
+                outer_db_conn.execute('SELECT 1')
+                inner_db_conn.execute('SELECT 1')
+
+            with self.assertRaises(sqlite3.ProgrammingError):
+                inner_db._conn.execute('SELECT 1')
+            self.db._conn.execute('SELECT 1')
+
+        with self.assertRaises(sqlite3.ProgrammingError):
+            self.db._conn.execute('SELECT 1')
 
 
 if __name__ == '__main__':

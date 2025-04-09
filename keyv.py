@@ -19,6 +19,18 @@ class Collection:
         self.name = name
         self.serializer = serializer
 
+    def __str__(self):
+        return f'Collection(name={self.name}, db={self.db.path}, serializer={self.serializer})'
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.db.close()
+
     def _execute_sql(
         self,
         query: str,
@@ -290,12 +302,6 @@ class Collection:
         result = self._execute_sql(sql, (key,))
         return result[0][0] > 0
 
-    def __str__(self):
-        return f'Collection(name={self.name}, db={self.db.path}, serializer={self.serializer})'
-
-    def __repr__(self):
-        return self.__str__()
-
 
 class KeyVDatabase:
     def __init__(
@@ -384,6 +390,7 @@ class KeyVDatabase:
             name: The name of the collection.
             create_if_not_exists: If True, creates the collection if it does not exist. Defaults to True.
             serializer: The serializer to use. Defaults to None.
+
         Returns:
             The collection instance.
 
@@ -419,7 +426,7 @@ def connect(
     """
     Returns a database instance
 
-    args:
+    Args:
         path: Path to the database file.
 
         init_command:
@@ -430,7 +437,7 @@ def connect(
             SQLite isolation level.
             defaults to: 'IMMEDIATE'
 
-    returns:
+    Returns:
         Database instance
     """
     if init_command is None:
