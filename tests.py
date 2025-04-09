@@ -3,7 +3,23 @@ import tempfile
 import shutil
 from pathlib import Path
 import keyv
-from keyv import Collection
+import json
+import pickle
+
+
+class TestClass:
+    def __init__(self, name, value):
+        self.name = name
+        self.value = value
+
+    def __eq__(self, other):
+        if not isinstance(other, TestClass):
+            return False
+        return self.name == other.name and self.value == other.value
+
+
+def test_func(x):
+    return x * 2
 
 
 class TestKeyV(unittest.TestCase):
@@ -11,159 +27,164 @@ class TestKeyV(unittest.TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.db_path = Path(self.test_dir) / 'test_db.db'
         self.db = keyv.connect(self.db_path)
+        # Create a default collection for testing
+        self.collection = self.db.collection('test_collection')
 
     def tearDown(self):
         if self.db._conn:
             self.db._conn.close()
         shutil.rmtree(self.test_dir)
 
-    def test_set_and_get(self):
-        key, value = 'key1', 'value1'
-        self.db.set(key, value)
-        retrieved_value = self.db.get(key)
-        self.assertEqual(retrieved_value, value)
-
-    def test_set_duplicate_key(self):
-        key, value = 'key1', 'value1'
-        self.db.set(key, value)
-        with self.assertRaises(ValueError):
-            self.db.set(key, 'value2')
-
-    def test_set_replace_if_exists_true(self):
-        self.db.set('k1', 'old')
-        self.db.set('k1', 'new', replace_if_exists=True)
-        self.assertEqual(self.db.get('k1'), 'new')
-
-    def test_update(self):
-        key, value = 'key1', 'value1'
-        new_value = 'new_value1'
-        self.db.set(key, value)
-        self.db.update(key, new_value)
-        retrieved_value = self.db.get(key)
-        self.assertEqual(retrieved_value, new_value)
-
-    def test_delete(self):
-        key, value = 'key1', 'value1'
-        self.db.set(key, value)
-        self.db.delete(key)
-        retrieved_value = self.db.get(key)
-        self.assertIsNone(retrieved_value)
-
-    def test_search(self):
-        self.db.set('key1', 'value1')
-        self.db.set('key2', 'value1')
-        self.db.set('key3', 'value2')
-        results = self.db.search('value1')
-        self.assertEqual(results, ['key1', 'key2'])
-
-    def test_keys(self):
-        self.db.set('key1', 'value1')
-        self.db.set('key2', 'value2')
-        keys = self.db.keys()
-        self.assertEqual(keys, ['key1', 'key2'])
-
-    def test_values(self):
-        self.db.set('key1', 'value1')
-        self.db.set('key2', 'value2')
-        values = self.db.values()
-        self.assertEqual(set(values), {'value1', 'value2'})
-
-    def test_key_exists(self):
-        self.db.set('key1', 'value1')
-        self.assertTrue(self.db.key_exists('key1'))
-        self.assertFalse(self.db.key_exists('non_existent_key'))
-
     def test_collection_set_and_get(self):
-        collection = self.db.create_collection('test_collection')
-        key, value = 'col_key1', 'col_value1'
-        collection.set(key, value)
-        retrieved_value = collection.get(key)
+        key, value = 'key1', 'value1'
+        self.collection.set(key, value)
+        retrieved_value = self.collection.get(key)
         self.assertEqual(retrieved_value, value)
 
     def test_collection_set_duplicate_key(self):
-        collection = self.db.create_collection('test_collection2')
-        key, value = 'col_key1', 'col_value1'
-        collection.set(key, value)
+        key, value = 'key1', 'value1'
+        self.collection.set(key, value)
         with self.assertRaises(ValueError):
-            collection.set(key, 'col_value2')
+            self.collection.set(key, 'value2')
 
     def test_collection_set_replace_if_exists_true(self):
-        collection = self.db.create_collection('test_collection3')
-        collection.set('col_k1', 'old')
-        collection.set('col_k1', 'new', replace_if_exists=True)
-        self.assertEqual(collection.get('col_k1'), 'new')
+        self.collection.set('k1', 'old')
+        self.collection.set('k1', 'new', replace_if_exists=True)
+        self.assertEqual(self.collection.get('k1'), 'new')
 
     def test_collection_update(self):
-        collection = self.db.create_collection('test_collection4')
-        key, value = 'col_key1', 'col_value1'
-        new_value = 'col_new_value1'
-        collection.set(key, value)
-        collection.update(key, new_value)
-        retrieved_value = collection.get(key)
+        key, value = 'key1', 'value1'
+        new_value = 'new_value1'
+        self.collection.set(key, value)
+        self.collection.update(key, new_value)
+        retrieved_value = self.collection.get(key)
         self.assertEqual(retrieved_value, new_value)
 
     def test_collection_delete(self):
-        collection = self.db.create_collection('test_collection5')
-        key, value = 'col_key1', 'col_value1'
-        collection.set(key, value)
-        collection.delete(key)
-        retrieved_value = collection.get(key)
+        key, value = 'key1', 'value1'
+        self.collection.set(key, value)
+        self.collection.delete(key)
+        retrieved_value = self.collection.get(key)
         self.assertIsNone(retrieved_value)
 
     def test_collection_search(self):
-        collection = self.db.create_collection('test_collection6')
-        collection.set('col_key1', 'col_value1')
-        collection.set('col_key2', 'col_value1')
-        collection.set('col_key3', 'col_value2')
-        results = collection.search('col_value1')
-        self.assertEqual(set(results), {'col_key1', 'col_key2'})
+        self.collection.set('key1', 'value1')
+        self.collection.set('key2', 'value1')
+        self.collection.set('key3', 'value2')
+        results = self.collection.search('value1')
+        self.assertEqual(set(results), {'key1', 'key2'})
 
     def test_collection_keys(self):
-        collection = self.db.create_collection('test_collection7')
-        collection.set('col_key1', 'col_value1')
-        collection.set('col_key2', 'col_value2')
-        keys = collection.keys()
-        self.assertEqual(set(keys), {'col_key1', 'col_key2'})
+        self.collection.set('key1', 'value1')
+        self.collection.set('key2', 'value2')
+        keys = self.collection.keys()
+        self.assertEqual(set(keys), {'key1', 'key2'})
 
     def test_collection_values(self):
-        collection = self.db.create_collection('test_collection8')
-        collection.set('col_key1', 'col_value1')
-        collection.set('col_key2', 'col_value2')
-        values = collection.values()
-        self.assertEqual(set(values), {'col_value1', 'col_value2'})
+        self.collection.set('key1', 'value1')
+        self.collection.set('key2', 'value2')
+        values = self.collection.values()
+        self.assertEqual(set(values), {'value1', 'value2'})
 
     def test_collection_key_exists(self):
-        collection = self.db.create_collection('test_collection9')
-        collection.set('col_key1', 'col_value1')
-        self.assertTrue(collection.key_exists('col_key1'))
-        self.assertFalse(collection.key_exists('non_existent_key'))
+        self.collection.set('key1', 'value1')
+        self.assertTrue(self.collection.key_exists('key1'))
+        self.assertFalse(self.collection.key_exists('non_existent_key'))
 
-    def test_from_method(self):
-        collection_name = 'test_collection10'
-        self.db.create_collection(collection_name)
-        collection = self.db.from_(collection_name)
-        self.assertIsInstance(collection, Collection)
+    def test_create_collection(self):
+        collection_name = 'new_collection'
+        collection = self.db.create_collection(collection_name)
         self.assertEqual(collection.name, collection_name)
+        self.assertIn(collection_name, self.db.collections())
+
+    def test_get_collection(self):
+        collection_name = 'another_collection'
+        self.db.create_collection(collection_name)
+        collection = self.db.collection(collection_name)
+        self.assertEqual(collection.name, collection_name)
+
+    def test_collection_with_non_existent_name(self):
+        with self.assertRaises(ValueError):
+            self.db.collection('non_existent_collection', create_if_not_exists=False)
+
+    def test_collection_create_if_not_exists(self):
+        new_collection_name = 'auto_created_collection'
+        collection = self.db.collection(new_collection_name, create_if_not_exists=True)
+        self.assertEqual(collection.name, new_collection_name)
+        self.assertIn(new_collection_name, self.db.collections())
 
     def test_collections_method(self):
         initial_collections = set(self.db.collections())
-        new_collection_name = 'test_collection11'
+        new_collection_name = 'test_collection_list'
         self.db.create_collection(new_collection_name)
         updated_collections = set(self.db.collections())
         self.assertEqual(
             updated_collections, initial_collections | {new_collection_name}
         )
 
-    def test_from_method_with_non_existent_collection(self):
-        with self.assertRaises(ValueError):
-            self.db.from_('non_existent_collection', create_if_not_exists=False)
+    def test_json_serializer_collection(self):
+        json_collection = self.db.collection('json_collection', serializer='json')
 
-    def test_from_method_create_if_not_exists(self):
-        new_collection_name = 'new_collection'
-        collection = self.db.from_(new_collection_name, create_if_not_exists=True)
-        self.assertIsInstance(collection, Collection)
-        self.assertEqual(collection.name, new_collection_name)
-        self.assertIn(new_collection_name, self.db.collections())
+        test_dict = {'name': 'John', 'age': 30, 'roles': ['admin', 'user']}
+        json_collection.set('user', test_dict)
+        retrieved_dict = json_collection.get('user')
+        self.assertEqual(retrieved_dict, test_dict)
+
+        test_list = [1, 2, 3, 4, 5]
+        json_collection.set('numbers', test_list)
+        retrieved_list = json_collection.get('numbers')
+        self.assertEqual(retrieved_list, test_list)
+
+        nested_data = {
+            'users': [{'id': 1, 'name': 'Alice'}, {'id': 2, 'name': 'Bob'}],
+            'settings': {'active': True, 'options': ['opt1', 'opt2']},
+        }
+        json_collection.set('complex', nested_data)
+        retrieved_nested = json_collection.get('complex')
+        self.assertEqual(retrieved_nested, nested_data)
+
+    def test_pickle_serializer_collection(self):
+        pickle_collection = self.db.collection('pickle_collection', serializer='pickle')
+
+        test_obj = TestClass('test', 123)
+        pickle_collection.set('obj', test_obj)
+        retrieved_obj = pickle_collection.get('obj')
+        self.assertEqual(retrieved_obj.name, test_obj.name)
+        self.assertEqual(retrieved_obj.value, test_obj.value)
+        self.assertEqual(retrieved_obj, test_obj)
+
+        pickle_collection.set('func', test_func)
+        retrieved_func = pickle_collection.get('func')
+        self.assertEqual(retrieved_func(5), 10)
+
+    def test_override_collection_serializer(self):
+        mixed_collection = self.db.collection('mixed_collection', serializer='json')
+
+        json_data = {'a': 1, 'b': 2}
+        mixed_collection.set('json_data', json_data)
+
+        custom_obj = TestClass('test_object', 123)
+        mixed_collection.set('pickle_data', custom_obj, serializer='pickle')
+
+        retrieved_json = mixed_collection.get('json_data')
+        retrieved_pickle = mixed_collection.get('pickle_data', serializer='pickle')
+
+        self.assertEqual(retrieved_json, json_data)
+        self.assertEqual(retrieved_pickle, custom_obj)
+
+        with self.assertRaises(Exception):
+            mixed_collection.get('pickle_data')
+
+    def test_serializer_search(self):
+        json_collection = self.db.collection('search_collection', serializer='json')
+
+        common_value = {'status': 'active', 'type': 'user'}
+        json_collection.set('item1', common_value)
+        json_collection.set('item2', common_value)
+        json_collection.set('item3', {'status': 'inactive'})
+
+        search_results = json_collection.search(common_value)
+        self.assertEqual(set(search_results), {'item1', 'item2'})
 
 
 if __name__ == '__main__':
