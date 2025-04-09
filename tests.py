@@ -186,6 +186,113 @@ class TestKeyV(unittest.TestCase):
         search_results = json_collection.search(common_value)
         self.assertEqual(set(search_results), {'item1', 'item2'})
 
+    def test_iteritems(self):
+        items_collection = self.db.collection('items_collection')
+        test_data = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
+
+        for key, value in test_data.items():
+            items_collection.set(key, value)
+
+        # Convert iterator to dictionary for comparison
+        retrieved_items = dict(items_collection.iteritems())
+        self.assertEqual(retrieved_items, test_data)
+
+        # Test with serializer
+        json_collection = self.db.collection('json_items', serializer='json')
+        complex_data = {
+            'obj1': {'name': 'Object 1', 'id': 1},
+            'obj2': {'name': 'Object 2', 'id': 2},
+        }
+
+        for key, value in complex_data.items():
+            json_collection.set(key, value)
+
+        retrieved_json_items = dict(json_collection.iteritems())
+        self.assertEqual(retrieved_json_items, complex_data)
+
+    def test_iterkeys(self):
+        # Create a collection with test data
+        keys_collection = self.db.collection('keys_collection')
+        test_keys = ['key1', 'key2', 'key3', 'key4']
+
+        for key in test_keys:
+            keys_collection.set(key, f'value-{key}')
+
+        # Test iterkeys returns all keys in the collection
+        retrieved_keys = list(keys_collection.iterkeys())
+        self.assertEqual(set(retrieved_keys), set(test_keys))
+
+        # Test iterkeys with non-string keys
+        numeric_collection = self.db.collection('numeric_keys')
+        numeric_keys = [1, 2, 3, 4.5]
+
+        for key in numeric_keys:
+            numeric_collection.set(key, f'value-{key}')
+
+        retrieved_numeric_keys = list(numeric_collection.iterkeys())
+        self.assertEqual(set(retrieved_numeric_keys), set(numeric_keys))
+
+        # Test with empty collection
+        empty_collection = self.db.collection('empty_collection')
+        self.assertEqual(list(empty_collection.iterkeys()), [])
+
+    def test_itervalues(self):
+        # Create a collection with test data
+        values_collection = self.db.collection('values_collection')
+        test_data = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
+
+        for key, value in test_data.items():
+            values_collection.set(key, value)
+
+        # Test itervalues returns all values in the collection
+        retrieved_values = list(values_collection.itervalues())
+        self.assertEqual(set(retrieved_values), set(test_data.values()))
+
+        # Test with serialized complex objects
+        json_values_collection = self.db.collection('json_values', serializer='json')
+        complex_values = {
+            'obj1': {'name': 'Object 1', 'id': 1},
+            'obj2': {'name': 'Object 2', 'id': 2},
+            'obj3': [1, 2, 3, 4],
+        }
+
+        for key, value in complex_values.items():
+            json_values_collection.set(key, value)
+
+        retrieved_complex_values = list(json_values_collection.itervalues())
+        self.assertEqual(
+            set(str(v) for v in retrieved_complex_values),
+            set(str(v) for v in complex_values.values()),
+        )
+
+        # Test with pickle serializer
+        pickle_values_collection = self.db.collection(
+            'pickle_values', serializer='pickle'
+        )
+        test_obj1 = TestClass('test1', 100)
+        test_obj2 = TestClass('test2', 200)
+
+        pickle_values_collection.set('obj1', test_obj1)
+        pickle_values_collection.set('obj2', test_obj2)
+
+        retrieved_pickle_values = list(pickle_values_collection.itervalues())
+        self.assertEqual(len(retrieved_pickle_values), 2)
+        self.assertTrue(
+            all(isinstance(obj, TestClass) for obj in retrieved_pickle_values)
+        )
+        self.assertTrue(
+            any(
+                obj.name == 'test1' and obj.value == 100
+                for obj in retrieved_pickle_values
+            )
+        )
+        self.assertTrue(
+            any(
+                obj.name == 'test2' and obj.value == 200
+                for obj in retrieved_pickle_values
+            )
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

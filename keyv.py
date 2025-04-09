@@ -5,7 +5,7 @@ import pickle
 import sqlite3
 from pathlib import Path
 from sqlite3 import Connection
-from typing import Any, Union, List, Literal, Optional
+from typing import Any, Union, List, Literal, Optional, Iterator
 
 
 class Collection:
@@ -191,23 +191,84 @@ class Collection:
 
         Returns:
             A list of all keys in the collection.
+
+        NOTE: this is an expensive operation, and should be used sparingly. We recommend using .iterkeys() instead.
         """
         result = self._execute_sql(f'select key from {self.name}')
         if result:
             return [row[0] for row in result]
         return []
 
-    def values(self) -> List[Any]:
+    def iterkeys(self) -> Iterator[Any]:
+        """
+        Iterates over all keys in the collection.
+
+        Returns:
+            An iterator over all keys in the collection.
+        """
+        with self.db._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f'select key from {self.name}')
+            for row in cursor:
+                yield row[0]
+
+    def values(
+        self,
+        serializer: Optional[Literal['json', 'pickle']] = None,
+    ) -> List[Any]:
         """
         Retrieves all values in the collection.
 
+        Args:
+            serializer: The serializer to use. Defaults to None.
+
         Returns:
             A list of all values in the collection.
+
+        NOTE: this is an expensive operation, and should be used sparingly. We recommend using .itervalues() instead.
         """
         result = self._execute_sql(f'select value from {self.name}')
         if result:
-            return [self._deserialize_if_provided(row[0]) for row in result]
+            return [self._deserialize_if_provided(row[0], serializer) for row in result]
         return []
+
+    def itervalues(
+        self,
+        serializer: Optional[Literal['json', 'pickle']] = None,
+    ) -> Iterator[Any]:
+        """
+        Iterates over all values in the collection.
+
+        Args:
+            serializer: The serializer to use. Defaults to None.
+
+        Returns:
+            An iterator over all values in the collection.
+        """
+        with self.db._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f'select value from {self.name}')
+            for row in cursor:
+                yield self._deserialize_if_provided(row[0], serializer)
+
+    def iteritems(
+        self,
+        serializer: Optional[Literal['json', 'pickle']] = None,
+    ) -> Iterator[tuple[Any, Any]]:
+        """
+        Iterates over all key-value pairs in the collection.
+
+        Args:
+            serializer: The serializer to use for values. Defaults to None.
+
+        Returns:
+            An iterator over all key-value pairs in the collection as (key, value) tuples.
+        """
+        with self.db._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(f'select key, value from {self.name}')
+            for key, value in cursor:
+                yield (key, self._deserialize_if_provided(value, serializer))
 
     def key_exists(self, key: Any) -> bool:
         """
