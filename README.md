@@ -114,3 +114,11 @@ When using serializers:
 - Pickle is better for Python-specific objects but less secure and not cross-language compatible
 - You can set a default serializer for a collection or specify one for individual operations
 - Data is automatically deserialized when retrieved
+
+# License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+# Contributing
+
+Contributions are welcome! Please feel free to submit a PR.
