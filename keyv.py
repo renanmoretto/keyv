@@ -27,7 +27,7 @@ class Collection:
                 conn.commit()
             return cursor.fetchall()
 
-    def put(self, key: Any, value: Any, replace_if_exists: bool = False):
+    def set(self, key: Any, value: Any, replace_if_exists: bool = False):
         """
         Inserts a key-value pair into the collection.
 
@@ -201,7 +201,7 @@ class KeyVDatabase:
         """
         self._get_conn().close()
 
-    def put(self, key: Any, value: Any, replace_if_exists: bool = False):
+    def set(self, key: Any, value: Any, replace_if_exists: bool = False):
         """
         Inserts a key-value pair into the default collection.
 
@@ -213,7 +213,7 @@ class KeyVDatabase:
         Raises:
             ValueError: If the key already exists and replace_if_exists is False.
         """
-        self.from_(_DEFAULT_COLLECTION_NAME).put(key, value, replace_if_exists)
+        self.from_(_DEFAULT_COLLECTION_NAME).set(key, value, replace_if_exists)
 
     def get(self, key: Any) -> Any:
         """

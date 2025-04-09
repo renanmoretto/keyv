@@ -19,35 +19,35 @@ db = keyv.connect('db.keyv') # or .db, or .anything, you choose
 ###
 ```python
 # insert a key-value pair
-db.put('key1', 'value1')
+db.set('key1', 'value1')
 
-# by default the .put method is unique safe, i.e. it raises an error
+# by default the .set method is unique safe, i.e. it raises an error
 # if the key already exists. if you don't want that behavior you can
 # use replace_if_exists=True.
-db.put('key1', 'value1', replace_if_exists=True)
+db.set('key1', 'value1', replace_if_exists=True)
 
 # retrieve a value by key
 db.get('key1')
-# output: 'value1'
+# >>> 'value1'
 # note: the get method returns None for non-existing keys
 
 # update a value
 db.update('key1', 123)
 db.get('key1')
-# output: 123
+# >>> 123
 
 # delete a key-value pair
 db.delete('key1')
 
 # search for keys by value
-db.put('key2', 'common_value')
-db.put('key3', 'common_value')
+db.set('key2', 'common_value')
+db.set('key3', 'common_value')
 db.search('common_value')
-# output: ['key2', 'key3']
+# >>> ['key2', 'key3']
 
 # retrieve all keys
 db.keys()
-# output: ['key2', 'key3']
+# >>> ['key2', 'key3']
 ```
 
 # Collections
@@ -61,35 +61,35 @@ Here's how you can use them:
 collection = db.collection('my_collection')
 
 # Insert a key-value pair into the collection
-collection.put('key1', 'value1')
+collection.set('key1', 'value1')
 
 # Retrieve a value by key from the collection
 collection.get('key1')
-# Output: 'value1'
+# >>> 'value1'
 
 # Update a value in the collection
 collection.update('key1', 'new_value')
 
 # Check if a key exists in the collection
 collection.key_exists('key1')
-# Output: True
+# >>> True
 
 # Delete a key-value pair from the collection
 collection.delete('key1')
 
 # Search for keys by value in the collection
-collection.put('key2', 'common_value')
-collection.put('key3', 'common_value')
+collection.set('key2', 'common_value')
+collection.set('key3', 'common_value')
 collection.search('common_value')
-# Output: ['key2', 'key3']
+# >>> ['key2', 'key3']
 
 # Retrieve all keys in the collection
 collection.keys()
-# Output: ['key2', 'key3']
+# >>> ['key2', 'key3']
 
 # Retrieve all values in the collection
 collection.values()
-# Output: ['common_value', 'common_value']
+# >>> ['common_value', 'common_value']
 ```
 
 Collections provide a flexible way to manage different sets of data within the same database, making it easier to organize and access your data efficiently.
