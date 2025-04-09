@@ -118,6 +118,8 @@ class Collection:
     def get(
         self,
         key: Any,
+        default: Any = None,
+        raise_if_missing: bool = False,
         serializer: Optional[Literal['json', 'pickle']] = None,
     ) -> Any:
         """
@@ -125,6 +127,8 @@ class Collection:
 
         Args:
             key: The key to look up.
+            default: The value to return if the key does not exist. Defaults to None.
+            raise_if_missing: If True, raises a ValueError if the key does not exist. Defaults to False.
             serializer: The serializer to use. Defaults to None.
 
         Returns:
@@ -135,7 +139,9 @@ class Collection:
         )
         if result:
             return self._deserialize_if_provided(result[0][0], serializer)
-        return None
+        if raise_if_missing:
+            raise ValueError(f'key {key} does not exist')
+        return default
 
     def update(
         self,

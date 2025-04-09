@@ -193,11 +193,9 @@ class TestKeyV(unittest.TestCase):
         for key, value in test_data.items():
             items_collection.set(key, value)
 
-        # Convert iterator to dictionary for comparison
         retrieved_items = dict(items_collection.iteritems())
         self.assertEqual(retrieved_items, test_data)
 
-        # Test with serializer
         json_collection = self.db.collection('json_items', serializer='json')
         complex_data = {
             'obj1': {'name': 'Object 1', 'id': 1},
@@ -211,18 +209,15 @@ class TestKeyV(unittest.TestCase):
         self.assertEqual(retrieved_json_items, complex_data)
 
     def test_iterkeys(self):
-        # Create a collection with test data
         keys_collection = self.db.collection('keys_collection')
         test_keys = ['key1', 'key2', 'key3', 'key4']
 
         for key in test_keys:
             keys_collection.set(key, f'value-{key}')
 
-        # Test iterkeys returns all keys in the collection
         retrieved_keys = list(keys_collection.iterkeys())
         self.assertEqual(set(retrieved_keys), set(test_keys))
 
-        # Test iterkeys with non-string keys
         numeric_collection = self.db.collection('numeric_keys')
         numeric_keys = [1, 2, 3, 4.5]
 
@@ -232,23 +227,19 @@ class TestKeyV(unittest.TestCase):
         retrieved_numeric_keys = list(numeric_collection.iterkeys())
         self.assertEqual(set(retrieved_numeric_keys), set(numeric_keys))
 
-        # Test with empty collection
         empty_collection = self.db.collection('empty_collection')
         self.assertEqual(list(empty_collection.iterkeys()), [])
 
     def test_itervalues(self):
-        # Create a collection with test data
         values_collection = self.db.collection('values_collection')
         test_data = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
 
         for key, value in test_data.items():
             values_collection.set(key, value)
 
-        # Test itervalues returns all values in the collection
         retrieved_values = list(values_collection.itervalues())
         self.assertEqual(set(retrieved_values), set(test_data.values()))
 
-        # Test with serialized complex objects
         json_values_collection = self.db.collection('json_values', serializer='json')
         complex_values = {
             'obj1': {'name': 'Object 1', 'id': 1},
@@ -265,7 +256,6 @@ class TestKeyV(unittest.TestCase):
             set(str(v) for v in complex_values.values()),
         )
 
-        # Test with pickle serializer
         pickle_values_collection = self.db.collection(
             'pickle_values', serializer='pickle'
         )
@@ -292,6 +282,65 @@ class TestKeyV(unittest.TestCase):
                 for obj in retrieved_pickle_values
             )
         )
+
+    def test_get_with_default(self):
+        """Test the get method with a custom default value for non-existent keys."""
+        self.assertEqual(
+            self.collection.get('non_existent_key', default='custom_default'),
+            'custom_default',
+        )
+
+        self.assertEqual(self.collection.get('non_existent_key', default=42), 42)
+
+        default_dict = {'default': True, 'data': [1, 2, 3]}
+        self.assertEqual(
+            self.collection.get('non_existent_key', default=default_dict), default_dict
+        )
+
+        self.collection.set('existing_key', 'existing_value')
+        self.assertEqual(
+            self.collection.get('existing_key', default='default_value'),
+            'existing_value',
+        )
+
+    def test_get_raise_if_missing(self):
+        """Test the get method with raise_if_missing parameter."""
+        with self.assertRaises(ValueError):
+            self.collection.get('non_existent_key', raise_if_missing=True)
+
+        self.collection.set('existing_key', 'existing_value')
+        self.assertEqual(
+            self.collection.get('existing_key', raise_if_missing=True), 'existing_value'
+        )
+
+        with self.assertRaises(ValueError):
+            self.collection.get(
+                'non_existent_key', default='ignored', raise_if_missing=True
+            )
+
+    def test_get_with_serializer_and_default(self):
+        """Test get with serializer and default parameters together."""
+        json_collection = self.db.collection('json_defaults', serializer='json')
+
+        default_obj = {'name': 'Default', 'id': 0}
+        retrieved = json_collection.get('non_existent', default=default_obj)
+        self.assertEqual(retrieved, default_obj)
+
+        test_obj = {'name': 'Test', 'id': 1}
+        json_collection.set('test_key', test_obj)
+        retrieved = json_collection.get('test_key')
+        self.assertEqual(retrieved, test_obj)
+
+        pickle_collection = self.db.collection('pickle_defaults', serializer='pickle')
+        custom_obj = TestClass('default_obj', 100)
+
+        result = pickle_collection.get('non_existent', default=custom_obj)
+        self.assertEqual(result, custom_obj)
+
+        test_dict = {'a': 1, 'b': 2}
+        pickle_collection.set('json_in_pickle', test_dict, serializer='json')
+        retrieved = pickle_collection.get('json_in_pickle', serializer='json')
+        self.assertEqual(retrieved, test_dict)
 
 
 if __name__ == '__main__':
