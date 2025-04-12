@@ -307,16 +307,32 @@ class KeyVDatabase:
     def __init__(
         self,
         path: Union[str, Path],
-        init_command: str,
-        isolation_level: str,
-        **kwargs,
+        init_command: str = 'PRAGMA journal_mode=WAL; PRAGMA synchronous=1;',
+        isolation_level: str = 'IMMEDIATE',
+        **sqlite_kwargs,
     ):
+        """Initialize a new KeyVDatabase instance.
+
+        Args:
+            path (Union[str, Path]): Path to the SQLite database file. If a string is provided,
+                it will be converted to a Path object.
+            init_command (str): SQL command(s) to execute when initializing the database.
+                This is typically used to set up PRAGMAs and other database settings.
+            isolation_level (str): SQLite isolation level for transactions. Common values
+                include 'DEFERRED', 'IMMEDIATE', and 'EXCLUSIVE'.
+            **sqlite_kwargs: Additional keyword arguments to pass to sqlite3.connect().
+                These can be used to configure various SQLite connection parameters.
+
+        Note:
+            The database directory will be created if it doesn't exist. The database
+            connection is not established immediately, but is created lazily when needed.
+        """
         if isinstance(path, str):
             path = Path(path)
 
         self.path = path
         self._init_command = init_command
-        self._sqlite_kwargs = kwargs
+        self._sqlite_kwargs = sqlite_kwargs
         self._isolation_level = isolation_level
         self._conn: Connection | None = None
 
@@ -420,7 +436,7 @@ class KeyVDatabase:
 
 def connect(
     path: Union[str, Path],
-    init_command: str | None = None,
+    init_command: str = 'PRAGMA journal_mode=WAL; PRAGMA synchronous=1;',
     isolation_level: str = 'IMMEDIATE',
 ) -> KeyVDatabase:
     """
@@ -440,9 +456,6 @@ def connect(
     Returns:
         Database instance
     """
-    if init_command is None:
-        init_command = 'PRAGMA journal_mode=WAL; PRAGMA synchronous=1;'
-
     return KeyVDatabase(
         path=path,
         init_command=init_command,
