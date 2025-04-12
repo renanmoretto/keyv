@@ -344,7 +344,7 @@ class KeyVDatabase:
         if not parents.exists():
             parents.mkdir(parents=True, exist_ok=True)
 
-    def _get_conn(self):
+    def _get_conn(self) -> sqlite3.Connection:
         if self._conn is None:
             self._conn = sqlite3.connect(
                 self.path,
@@ -352,6 +352,18 @@ class KeyVDatabase:
                 isolation_level=self._isolation_level,
                 **self._sqlite_kwargs,
             )
+        else:
+            try:
+                # check if connection is alive
+                self._conn.execute('select 1')
+            except sqlite3.ProgrammingError:
+                # connection is closed, create a new one
+                self._conn = sqlite3.connect(
+                    self.path,
+                    check_same_thread=False,
+                    isolation_level=self._isolation_level,
+                    **self._sqlite_kwargs,
+                )
         return self._conn
 
     def _init(self):
@@ -369,6 +381,13 @@ class KeyVDatabase:
             )
             conn.execute(f'create unique index if not exists idx_key on {name}(key)')
             conn.commit()
+
+    @property
+    def connection(self) -> sqlite3.Connection:
+        """
+        Returns the database connection.
+        """
+        return self._get_conn()
 
     def close(self):
         """
@@ -430,7 +449,7 @@ class KeyVDatabase:
         """
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            cursor.execute("select name from sqlite_master where type='table'")
             return [table[0] for table in cursor.fetchall()]
 
 

@@ -32,8 +32,8 @@ class TestKeyV(unittest.TestCase):
         self.collection = self.db.collection('test_collection')
 
     def tearDown(self):
-        if self.db._conn:
-            self.db._conn.close()
+        if self.db.connection:
+            self.db.connection.close()
         shutil.rmtree(self.test_dir)
 
     def test_collection_set_and_get(self):
@@ -356,8 +356,8 @@ class TestKeyV(unittest.TestCase):
 
         with db.collection('with_test') as collection:
             collection.set('key1', 'value1')
-            self.assertIsNotNone(db._conn)
-            db._conn.execute('SELECT 1')
+            self.assertIsNotNone(db.connection)
+            db.connection.execute('SELECT 1')
 
         with self.assertRaises(sqlite3.ProgrammingError):
             db._conn.execute('SELECT 1')
@@ -370,7 +370,7 @@ class TestKeyV(unittest.TestCase):
         try:
             with db.collection('except_test') as collection:
                 collection.set('key1', 'value1')
-                db._conn.execute('SELECT 1')
+                db.connection.execute('SELECT 1')
                 raise ValueError('Test exception')
         except ValueError:
             pass
@@ -392,8 +392,8 @@ class TestKeyV(unittest.TestCase):
                 self.assertEqual(outer.get('outer_key'), 'outer_value')
                 self.assertEqual(inner.get('inner_key'), 'inner_value')
 
-                outer_db_conn = self.db._conn
-                inner_db_conn = inner_db._conn
+                outer_db_conn = self.db.connection
+                inner_db_conn = inner_db.connection
                 outer_db_conn.execute('SELECT 1')
                 inner_db_conn.execute('SELECT 1')
 
