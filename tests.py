@@ -6,6 +6,7 @@ import keyv
 import json
 import pickle
 import sqlite3
+import os
 
 
 class TestClass:
@@ -403,6 +404,45 @@ class TestKeyV(unittest.TestCase):
 
         with self.assertRaises(sqlite3.ProgrammingError):
             self.db._conn.execute('SELECT 1')
+
+    def test_change_name_basic(self):
+        original_name = 'rename_test'
+        new_name = 'renamed_collection'
+
+        original_collection = self.db.create_collection(original_name)
+        original_collection.set('key1', 'value1')
+
+        renamed_collection = original_collection.change_name(new_name)
+
+        self.assertEqual(renamed_collection.name, new_name)
+        self.assertEqual(original_collection.name, new_name)
+        self.assertIn(new_name, self.db.collections())
+        self.assertNotIn(original_name, self.db.collections())
+
+    def test_change_name_preserves_data(self):
+        original_name = 'data_collection'
+        new_name = 'preserved_data'
+
+        collection = self.db.create_collection(original_name)
+        test_data = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
+
+        for key, value in test_data.items():
+            collection.set(key, value)
+
+        collection.change_name(new_name)
+        for key, expected_value in test_data.items():
+            self.assertEqual(collection.get(key), expected_value)
+
+        fresh_collection = self.db.collection(new_name)
+        for key, expected_value in test_data.items():
+            self.assertEqual(fresh_collection.get(key), expected_value)
+
+    def test_change_name_method_chaining(self):
+        collection = self.db.create_collection('chain_test')
+        result = collection.change_name('chain_renamed').set('key', 'value')
+        self.assertIsNone(result)
+        self.assertEqual(collection.name, 'chain_renamed')
+        self.assertEqual(collection.get('key'), 'value')
 
 
 if __name__ == '__main__':
