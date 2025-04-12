@@ -46,9 +46,53 @@ collection.set('key3', 'common_value')
 collection.search('common_value')
 # >>> ['key2', 'key3']
 
-# retrieve all keys
+# retrieve all keys, values and items
 collection.keys()
 # >>> ['key2', 'key3']
+
+# retrieve all values
+collection.values()
+# >>> ['common_value', 'common_value']
+
+# retrieve all key-value pairs
+collection.items()
+# >>> [('key2', 'common_value'), ('key3', 'common_value')]
+
+# check if a key exists
+collection.key_exists('key2')
+# >>> True
+
+# rename a collection
+collection.change_name('new_collection_name')
+
+# delete a collection
+db.delete_collection('new_collection_name')
+
+# get list of all collections
+db.collections()
+# >>> ['collection1', 'collection2', ...]
+
+# iterate over key-value pairs
+for key, value in collection.iteritems():
+    print(f"{key}: {value}")
+
+# iterate over keys
+for key in collection.iterkeys():
+    print(key)
+
+# iterate over values
+for value in collection.itervalues():
+    print(value)
+
+# get with default value for missing keys
+collection.get('missing_key', default='default_value')
+# >>> 'default_value'
+
+# raise exception for missing keys
+try:
+    collection.get('missing_key', raise_if_missing=True)
+except ValueError:
+    print("Key not found!")
 ```
 
 Collections allow you to organize your data into separate namespaces within the same database file.

@@ -212,15 +212,52 @@ class Collection:
         """
         Retrieves all keys in the collection.
 
+        Note:
+            Not recommended for large datasets, since this method loads all items
+            into memory at once. Use `.iterkeys()` instead for better memory usage.
+
         Returns:
             A list of all keys in the collection.
-
-        NOTE: this is an expensive operation, and should be used sparingly. We recommend using .iterkeys() instead.
         """
-        result = self._execute_sql(f'select key from {self.name}')
-        if result:
-            return [row[0] for row in result]
-        return []
+        return list(self.iterkeys())
+
+    def values(
+        self,
+        serializer: Optional[Literal['json', 'pickle']] = None,
+    ) -> List[Any]:
+        """
+        Retrieves all values in the collection.
+
+        Note:
+            Not recommended for large datasets, since this method loads all items
+            into memory at once. Use `.itervalues()` instead for better memory usage.
+
+        Args:
+            serializer: The serializer to use. Defaults to None.
+
+        Returns:
+            A list of all values in the collection.
+        """
+        return list(self.itervalues(serializer))
+
+    def items(
+        self,
+        serializer: Optional[Literal['json', 'pickle']] = None,
+    ) -> List[tuple[Any, Any]]:
+        """
+        Retrieves all key-value pairs in the collection.
+
+        Note:
+            Not recommended for large datasets, since this method loads all items
+            into memory at once. Use `.iteritems()` instead for better memory usage.
+
+        Args:
+            serializer: The serializer to use. Defaults to None.
+
+        Returns:
+            A list of all key-value pairs in the collection.
+        """
+        return list(self.iteritems(serializer))
 
     def iterkeys(self) -> Iterator[Any]:
         """
@@ -234,26 +271,6 @@ class Collection:
             cursor.execute(f'select key from {self.name}')
             for row in cursor:
                 yield row[0]
-
-    def values(
-        self,
-        serializer: Optional[Literal['json', 'pickle']] = None,
-    ) -> List[Any]:
-        """
-        Retrieves all values in the collection.
-
-        Args:
-            serializer: The serializer to use. Defaults to None.
-
-        Returns:
-            A list of all values in the collection.
-
-        NOTE: this is an expensive operation, and should be used sparingly. We recommend using .itervalues() instead.
-        """
-        result = self._execute_sql(f'select value from {self.name}')
-        if result:
-            return [self._deserialize_if_provided(row[0], serializer) for row in result]
-        return []
 
     def itervalues(
         self,

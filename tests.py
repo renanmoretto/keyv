@@ -469,6 +469,42 @@ class TestKeyV(unittest.TestCase):
         recreated.set('new_key', 'new_value')
         self.assertEqual(recreated.get('new_key'), 'new_value')
 
+    def test_items_basic(self):
+        items_collection = self.db.collection('items_test_collection')
+        test_data = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
+
+        for key, value in test_data.items():
+            items_collection.set(key, value)
+
+        retrieved_items = dict(items_collection.items())
+        self.assertEqual(retrieved_items, test_data)
+
+    def test_items_with_serializer(self):
+        json_collection = self.db.collection('json_items_test', serializer='json')
+        json_data = {
+            'obj1': {'name': 'Object 1', 'id': 1},
+            'obj2': {'name': 'Object 2', 'id': 2},
+        }
+
+        for key, value in json_data.items():
+            json_collection.set(key, value)
+
+        retrieved_json_items = dict(json_collection.items())
+        self.assertEqual(retrieved_json_items, json_data)
+
+        pickle_collection = self.db.collection('pickle_items_test', serializer='pickle')
+        test_obj1 = TestClass('item1', 100)
+        test_obj2 = TestClass('item2', 200)
+        pickle_data = {'obj1': test_obj1, 'obj2': test_obj2}
+
+        for key, value in pickle_data.items():
+            pickle_collection.set(key, value)
+
+        retrieved_pickle_items = dict(pickle_collection.items())
+        self.assertEqual(len(retrieved_pickle_items), 2)
+        self.assertEqual(retrieved_pickle_items['obj1'], test_obj1)
+        self.assertEqual(retrieved_pickle_items['obj2'], test_obj2)
+
 
 if __name__ == '__main__':
     unittest.main()
