@@ -464,7 +464,8 @@ class KeyVDatabase:
         Args:
             name: The name of the collection to delete.
         """
-        self._execute_sql(f'drop table if exists {name}')
+        with self._get_conn() as conn:
+            conn.execute(f'drop table if exists {name}')
 
 
 def connect(

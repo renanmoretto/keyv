@@ -444,6 +444,31 @@ class TestKeyV(unittest.TestCase):
         self.assertEqual(collection.name, 'chain_renamed')
         self.assertEqual(collection.get('key'), 'value')
 
+    def test_delete_collection_basic(self):
+        collection_name = 'to_be_deleted'
+        self.db.create_collection(collection_name)
+        self.assertIn(collection_name, self.db.collections())
+        self.db.delete_collection(collection_name)
+        self.assertNotIn(collection_name, self.db.collections())
+
+    def test_delete_nonexistent_collection(self):
+        nonexistent_name = 'never_existed'
+        self.assertNotIn(nonexistent_name, self.db.collections())
+        self.db.delete_collection(nonexistent_name)
+        self.assertNotIn(nonexistent_name, self.db.collections())
+
+    def test_recreate_after_deletion(self):
+        collection_name = 'recreate_me'
+
+        collection = self.db.create_collection(collection_name)
+        collection.set('original_key', 'original_value')
+        self.db.delete_collection(collection_name)
+
+        recreated = self.db.create_collection(collection_name)
+        self.assertIsNone(recreated.get('original_key'))
+        recreated.set('new_key', 'new_value')
+        self.assertEqual(recreated.get('new_key'), 'new_value')
+
 
 if __name__ == '__main__':
     unittest.main()
