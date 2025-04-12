@@ -457,6 +457,15 @@ class KeyVDatabase:
             cursor.execute("select name from sqlite_master where type='table'")
             return [table[0] for table in cursor.fetchall()]
 
+    def delete_collection(self, name: str):
+        """
+        Deletes a collection from the database. Use this with caution since it will delete all data in the collection.
+
+        Args:
+            name: The name of the collection to delete.
+        """
+        self._execute_sql(f'drop table if exists {name}')
+
 
 def connect(
     path: Union[str, Path],
