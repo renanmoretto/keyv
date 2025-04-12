@@ -395,6 +395,16 @@ class KeyVDatabase:
         """
         self._get_conn().close()
 
+    def vacuum(self):
+        """
+        Rebuilds the database file, repacking it into a minimal amount of
+        disk space. This operation can be time-consuming for large databases.
+        See more: https://sqlite.org/lang_vacuum.html
+        """
+        with self._get_conn() as conn:
+            conn.execute('VACUUM')
+            conn.commit()
+
     def create_collection(
         self,
         name: str,
