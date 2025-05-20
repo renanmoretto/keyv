@@ -4,6 +4,20 @@ Transform SQLite into a powerful and fast key-value store.
 
 `keyv` is a lightweight library that turns SQLite into a NoSQL key-value database, combining the best of both worlds: the simplicity of key-value stores with the reliability of SQLite. Perfect for applications that need a robust local database without the complexity of a full DBMS.
 
+# Quick Start
+
+For simple use cases, you can create a default collection right away:
+
+```python
+# Create a database with a default collection
+db = keyv.connect('keyv.db').collection('main')
+
+# Now you can use the collection methods directly
+db.set('key1', 'value1')
+db.get('key1')
+# >>> 'value1'
+```
+
 # Usage
 
 ```bash
@@ -97,20 +111,6 @@ except ValueError:
 
 Collections allow you to organize your data into separate namespaces within the same database file.
 In practice, they are tables inside the SQLite file.
-
-# Quick Start
-
-For simple use cases, you can create a default collection right away:
-
-```python
-# Create a database with a default collection
-db = keyv.connect('keyv.db').collection('main')
-
-# Now you can use the collection methods directly
-db.set('key1', 'value1')
-db.get('key1')
-# >>> 'value1'
-```
 
 # License
 
