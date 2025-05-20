@@ -4,6 +4,7 @@ version = "0.3.6"
 description = "A lightweight, file-based NoSQL key-value database using sqlite3, designed for simple and practical uses without external dependencies."
 authors = ["renanmoretto <renan_moretto@outlook.com>"]
 readme = "README.md"
+repository = "https://github.com/renanmoretto/keyv"
 
 [tool.poetry.dependencies]
 python = ">=3.8"
