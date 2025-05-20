@@ -7,8 +7,12 @@ Transform SQLite into a powerful and fast key-value store.
 # Quick Start
 
 For simple use cases, you can create a default collection right away:
-
+```bash
+pip install keyv
+```
 ```python
+import keyv
+
 # Create a database with a default collection
 db = keyv.connect('keyv.db').collection('main')
 
@@ -19,10 +23,6 @@ db.get('key1')
 ```
 
 # Usage
-
-```bash
-pip install keyv
-```
 
 ```python
 import keyv
