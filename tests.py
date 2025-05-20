@@ -1,27 +1,10 @@
+import shutil
+import sqlite3
 import unittest
 import tempfile
-import shutil
 from pathlib import Path
+
 import keyv
-import json
-import pickle
-import sqlite3
-import os
-
-
-class TestClass:
-    def __init__(self, name, value):
-        self.name = name
-        self.value = value
-
-    def __eq__(self, other):
-        if not isinstance(other, TestClass):
-            return False
-        return self.name == other.name and self.value == other.value
-
-
-def test_func(x):
-    return x * 2
 
 
 class TestKeyV(unittest.TestCase):
@@ -43,15 +26,15 @@ class TestKeyV(unittest.TestCase):
         retrieved_value = self.collection.get(key)
         self.assertEqual(retrieved_value, value)
 
-    def test_collection_set_duplicate_key(self):
+    def test_collection_set_replace_if_exists_false(self):
         key, value = 'key1', 'value1'
         self.collection.set(key, value)
         with self.assertRaises(ValueError):
-            self.collection.set(key, 'value2')
+            self.collection.set(key, 'value2', replace_if_exists=False)
 
     def test_collection_set_replace_if_exists_true(self):
         self.collection.set('k1', 'old')
-        self.collection.set('k1', 'new', replace_if_exists=True)
+        self.collection.set('k1', 'new')
         self.assertEqual(self.collection.get('k1'), 'new')
 
     def test_collection_update(self):
@@ -124,70 +107,6 @@ class TestKeyV(unittest.TestCase):
             updated_collections, initial_collections | {new_collection_name}
         )
 
-    def test_json_serializer_collection(self):
-        json_collection = self.db.collection('json_collection', serializer='json')
-
-        test_dict = {'name': 'John', 'age': 30, 'roles': ['admin', 'user']}
-        json_collection.set('user', test_dict)
-        retrieved_dict = json_collection.get('user')
-        self.assertEqual(retrieved_dict, test_dict)
-
-        test_list = [1, 2, 3, 4, 5]
-        json_collection.set('numbers', test_list)
-        retrieved_list = json_collection.get('numbers')
-        self.assertEqual(retrieved_list, test_list)
-
-        nested_data = {
-            'users': [{'id': 1, 'name': 'Alice'}, {'id': 2, 'name': 'Bob'}],
-            'settings': {'active': True, 'options': ['opt1', 'opt2']},
-        }
-        json_collection.set('complex', nested_data)
-        retrieved_nested = json_collection.get('complex')
-        self.assertEqual(retrieved_nested, nested_data)
-
-    def test_pickle_serializer_collection(self):
-        pickle_collection = self.db.collection('pickle_collection', serializer='pickle')
-
-        test_obj = TestClass('test', 123)
-        pickle_collection.set('obj', test_obj)
-        retrieved_obj = pickle_collection.get('obj')
-        self.assertEqual(retrieved_obj.name, test_obj.name)
-        self.assertEqual(retrieved_obj.value, test_obj.value)
-        self.assertEqual(retrieved_obj, test_obj)
-
-        pickle_collection.set('func', test_func)
-        retrieved_func = pickle_collection.get('func')
-        self.assertEqual(retrieved_func(5), 10)
-
-    def test_override_collection_serializer(self):
-        mixed_collection = self.db.collection('mixed_collection', serializer='json')
-
-        json_data = {'a': 1, 'b': 2}
-        mixed_collection.set('json_data', json_data)
-
-        custom_obj = TestClass('test_object', 123)
-        mixed_collection.set('pickle_data', custom_obj, serializer='pickle')
-
-        retrieved_json = mixed_collection.get('json_data')
-        retrieved_pickle = mixed_collection.get('pickle_data', serializer='pickle')
-
-        self.assertEqual(retrieved_json, json_data)
-        self.assertEqual(retrieved_pickle, custom_obj)
-
-        with self.assertRaises(Exception):
-            mixed_collection.get('pickle_data')
-
-    def test_serializer_search(self):
-        json_collection = self.db.collection('search_collection', serializer='json')
-
-        common_value = {'status': 'active', 'type': 'user'}
-        json_collection.set('item1', common_value)
-        json_collection.set('item2', common_value)
-        json_collection.set('item3', {'status': 'inactive'})
-
-        search_results = json_collection.search(common_value)
-        self.assertEqual(set(search_results), {'item1', 'item2'})
-
     def test_iteritems(self):
         items_collection = self.db.collection('items_collection')
         test_data = {'key1': 'value1', 'key2': 'value2', 'key3': 'value3'}
@@ -197,18 +116,6 @@ class TestKeyV(unittest.TestCase):
 
         retrieved_items = dict(items_collection.iteritems())
         self.assertEqual(retrieved_items, test_data)
-
-        json_collection = self.db.collection('json_items', serializer='json')
-        complex_data = {
-            'obj1': {'name': 'Object 1', 'id': 1},
-            'obj2': {'name': 'Object 2', 'id': 2},
-        }
-
-        for key, value in complex_data.items():
-            json_collection.set(key, value)
-
-        retrieved_json_items = dict(json_collection.iteritems())
-        self.assertEqual(retrieved_json_items, complex_data)
 
     def test_iterkeys(self):
         keys_collection = self.db.collection('keys_collection')
@@ -241,49 +148,6 @@ class TestKeyV(unittest.TestCase):
 
         retrieved_values = list(values_collection.itervalues())
         self.assertEqual(set(retrieved_values), set(test_data.values()))
-
-        json_values_collection = self.db.collection('json_values', serializer='json')
-        complex_values = {
-            'obj1': {'name': 'Object 1', 'id': 1},
-            'obj2': {'name': 'Object 2', 'id': 2},
-            'obj3': [1, 2, 3, 4],
-        }
-
-        for key, value in complex_values.items():
-            json_values_collection.set(key, value)
-
-        retrieved_complex_values = list(json_values_collection.itervalues())
-        self.assertEqual(
-            set(str(v) for v in retrieved_complex_values),
-            set(str(v) for v in complex_values.values()),
-        )
-
-        pickle_values_collection = self.db.collection(
-            'pickle_values', serializer='pickle'
-        )
-        test_obj1 = TestClass('test1', 100)
-        test_obj2 = TestClass('test2', 200)
-
-        pickle_values_collection.set('obj1', test_obj1)
-        pickle_values_collection.set('obj2', test_obj2)
-
-        retrieved_pickle_values = list(pickle_values_collection.itervalues())
-        self.assertEqual(len(retrieved_pickle_values), 2)
-        self.assertTrue(
-            all(isinstance(obj, TestClass) for obj in retrieved_pickle_values)
-        )
-        self.assertTrue(
-            any(
-                obj.name == 'test1' and obj.value == 100
-                for obj in retrieved_pickle_values
-            )
-        )
-        self.assertTrue(
-            any(
-                obj.name == 'test2' and obj.value == 200
-                for obj in retrieved_pickle_values
-            )
-        )
 
     def test_get_with_default(self):
         """Test the get method with a custom default value for non-existent keys."""
@@ -319,30 +183,6 @@ class TestKeyV(unittest.TestCase):
             self.collection.get(
                 'non_existent_key', default='ignored', raise_if_missing=True
             )
-
-    def test_get_with_serializer_and_default(self):
-        """Test get with serializer and default parameters together."""
-        json_collection = self.db.collection('json_defaults', serializer='json')
-
-        default_obj = {'name': 'Default', 'id': 0}
-        retrieved = json_collection.get('non_existent', default=default_obj)
-        self.assertEqual(retrieved, default_obj)
-
-        test_obj = {'name': 'Test', 'id': 1}
-        json_collection.set('test_key', test_obj)
-        retrieved = json_collection.get('test_key')
-        self.assertEqual(retrieved, test_obj)
-
-        pickle_collection = self.db.collection('pickle_defaults', serializer='pickle')
-        custom_obj = TestClass('default_obj', 100)
-
-        result = pickle_collection.get('non_existent', default=custom_obj)
-        self.assertEqual(result, custom_obj)
-
-        test_dict = {'a': 1, 'b': 2}
-        pickle_collection.set('json_in_pickle', test_dict, serializer='json')
-        retrieved = pickle_collection.get('json_in_pickle', serializer='json')
-        self.assertEqual(retrieved, test_dict)
 
     def test_with_statement_basic(self):
         """Test using a collection with a 'with' statement."""
@@ -479,31 +319,277 @@ class TestKeyV(unittest.TestCase):
         retrieved_items = dict(items_collection.items())
         self.assertEqual(retrieved_items, test_data)
 
-    def test_items_with_serializer(self):
-        json_collection = self.db.collection('json_items_test', serializer='json')
-        json_data = {
-            'obj1': {'name': 'Object 1', 'id': 1},
-            'obj2': {'name': 'Object 2', 'id': 2},
+    # Additional test cases for edge cases
+    def test_empty_values(self):
+        """Test setting and getting empty strings and None values."""
+        self.collection.set('empty_string', '')
+        self.collection.set('none_value', None)
+
+        self.assertEqual(self.collection.get('empty_string'), '')
+        self.assertEqual(self.collection.get('none_value'), None)
+
+    def test_special_characters(self):
+        """Test keys and values with special characters."""
+        special_chars_key = '!@#$%^&*()_+{}[]|\\;:\'",.<>/?'
+        special_chars_value = 'áéíóúñÁÉÍÓÚÑüÜ€£¥©®™'
+
+        self.collection.set(special_chars_key, special_chars_value)
+        self.assertEqual(self.collection.get(special_chars_key), special_chars_value)
+
+    def test_unicode_characters(self):
+        """Test unicode characters in keys and values."""
+        unicode_key = '你好世界'
+        unicode_value = 'こんにちは世界'
+
+        self.collection.set(unicode_key, unicode_value)
+        self.assertEqual(self.collection.get(unicode_key), unicode_value)
+
+    def test_numeric_keys(self):
+        """Test using numeric keys of different types."""
+        test_data = {42: 'integer key', 3.14: 'float key', -100: 'negative integer'}
+
+        for key, value in test_data.items():
+            self.collection.set(key, value)
+            self.assertEqual(self.collection.get(key), value)
+
+    def test_update_nonexistent_key(self):
+        """Test updating a non-existent key."""
+        with self.assertRaises(Exception):
+            self.collection.update('nonexistent_key', 'value')
+            self.assertIsNone(self.collection.get('nonexistent_key'))
+
+    def test_collection_name_validation(self):
+        """Test that collection names are properly validated to prevent SQL injection."""
+        invalid_names = [
+            'collection; DROP TABLE test_collection;--',
+            "collection' OR '1'='1",
+            'collection" OR "1"="1',
+        ]
+
+        for name in invalid_names:
+            try:
+                # This should either raise an exception or sanitize the name
+                collection = self.db.collection(name)
+                # If it doesn't raise an exception, make sure we can use it safely
+                collection.set('test_key', 'test_value')
+                self.assertEqual(collection.get('test_key'), 'test_value')
+                # Check that no other collections were affected
+                self.assertIn('test_collection', self.db.collections())
+            except Exception as e:
+                # If it raises an exception, that's also acceptable
+                self.assertIsInstance(e, (ValueError, sqlite3.OperationalError))
+
+    def test_connection_recovery(self):
+        """Test that the connection can recover after being closed."""
+        # Close the connection
+        self.db.close()
+
+        # Try to use the collection
+        self.collection.set('recovery_key', 'recovery_value')
+        self.assertEqual(self.collection.get('recovery_key'), 'recovery_value')
+
+    def test_database_initialization_parameters(self):
+        """Test creating a database with different initialization parameters."""
+        custom_db_path = Path(self.test_dir) / 'custom_params.db'
+
+        # Test with different PRAGMA settings
+        custom_db = keyv.connect(
+            custom_db_path,
+            init_command='PRAGMA journal_mode=DELETE; PRAGMA synchronous=OFF;',
+            isolation_level='EXCLUSIVE',
+        )
+
+        # Check that we can use the database
+        collection = custom_db.collection('custom_collection')
+        collection.set('custom_key', 'custom_value')
+        self.assertEqual(collection.get('custom_key'), 'custom_value')
+
+        # Clean up
+        custom_db.close()
+
+    def test_concurrent_access(self):
+        """Test concurrent access to the database from multiple threads."""
+        import threading
+        import random
+
+        # Create a new collection for this test
+        collection_name = 'concurrent_test'
+        concurrent_collection = self.db.collection(collection_name)
+
+        # Number of threads and operations
+        num_threads = 10
+        operations_per_thread = 50
+
+        # Counter for successful operations
+        successful_ops = [0]
+        lock = threading.Lock()
+
+        def worker(thread_id):
+            """Worker function for each thread."""
+            for i in range(operations_per_thread):
+                try:
+                    key = f'thread_{thread_id}_key_{i}'
+                    value = f'value_{random.randint(1, 1000)}'
+
+                    # Randomly choose an operation
+                    op = random.choice(['set', 'get', 'update', 'delete'])
+
+                    if op == 'set':
+                        concurrent_collection.set(key, value, replace_if_exists=True)
+                    elif op == 'get':
+                        concurrent_collection.get(key, default='not_found')
+                    elif op == 'update':
+                        try:
+                            concurrent_collection.update(key, f'updated_{value}')
+                        except Exception:
+                            # Update might fail if key doesn't exist, that's ok
+                            pass
+                    elif op == 'delete':
+                        concurrent_collection.delete(key)
+
+                    with lock:
+                        successful_ops[0] += 1
+                except Exception:
+                    # If any operation fails, continue with the next one
+                    pass
+
+        # Create and start threads
+        threads = []
+        for i in range(num_threads):
+            t = threading.Thread(target=worker, args=(i,))
+            threads.append(t)
+            t.start()
+
+        # Wait for all threads to complete
+        for t in threads:
+            t.join()
+
+        # Check that some operations were successful
+        self.assertGreater(successful_ops[0], 0)
+
+    def test_collection_reopening(self):
+        """Test that a collection can be reopened after closing the database."""
+        # Create data in collection
+        self.collection.set('reopen_key', 'reopen_value')
+
+        # Close database connection
+        self.db.close()
+
+        # Reopen database and collection
+        reopened_db = keyv.connect(self.db_path)
+        reopened_collection = reopened_db.collection('test_collection')
+
+        # Verify data is still accessible
+        self.assertEqual(reopened_collection.get('reopen_key'), 'reopen_value')
+
+        # Clean up
+        reopened_db.close()
+
+    def test_collection_isolation(self):
+        """Test that collections are properly isolated from each other."""
+        # Create two collections
+        collection1 = self.db.collection('isolation_test_1')
+        collection2 = self.db.collection('isolation_test_2')
+
+        # Add data to collection1
+        collection1.set('key1', 'value1')
+
+        # Verify key doesn't exist in collection2
+        self.assertIsNone(collection2.get('key1'))
+
+        # Add same key with different value to collection2
+        collection2.set('key1', 'different_value')
+
+        # Verify both collections maintain separate values
+        self.assertEqual(collection1.get('key1'), 'value1')
+        self.assertEqual(collection2.get('key1'), 'different_value')
+
+    def test_binary_data(self):
+        """Test storing and retrieving binary data."""
+        # Binary data
+        binary_data = b'\x00\x01\x02\x03\xff\xfe\xfd\xfc'
+        self.collection.set('binary', binary_data)
+        retrieved = self.collection.get('binary')
+        self.assertEqual(retrieved, binary_data)
+
+        # Image-like binary data (e.g., small PNG header)
+        png_header = b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00'
+        self.collection.set('png_header', png_header)
+        self.assertEqual(self.collection.get('png_header'), png_header)
+
+    def test_boolean_values(self):
+        """Test storing and retrieving boolean values."""
+        self.collection.set('true_value', True)
+        self.collection.set('false_value', False)
+
+        self.assertEqual(self.collection.get('true_value'), True)
+        self.assertEqual(self.collection.get('false_value'), False)
+
+        # Test searching for boolean values
+        results = self.collection.search(True)
+        self.assertIn('true_value', results)
+        self.assertNotIn('false_value', results)
+
+    def test_transaction_rollback(self):
+        """Test that transactions are rolled back when exceptions occur."""
+        # Attempt to create a collection with an invalid name to trigger an exception
+        try:
+            with self.db._get_conn() as conn:
+                cursor = conn.cursor()
+                cursor.execute('BEGIN TRANSACTION')
+
+                # Add a key-value pair that should be rolled back
+                cursor.execute(
+                    f'insert into {self.collection.name} (key, value) values (?, ?)',
+                    ('transaction_key', 'transaction_value'),
+                )
+
+                # Execute invalid SQL to trigger an exception
+                cursor.execute('INVALID SQL STATEMENT')
+
+                # This should not be reached
+                conn.commit()
+        except sqlite3.OperationalError:
+            # Exception expected
+            pass
+
+        # Verify the key doesn't exist (transaction should have been rolled back)
+        self.assertIsNone(self.collection.get('transaction_key'))
+
+    def test_serialization(self):
+        """Test serializing complex data structures before storage."""
+        import json
+        import pickle
+
+        # Dictionary to be stored
+        data_dict = {'nested': {'dict': True}, 'list': [1, 2, 3]}
+
+        # JSON serialization
+        self.collection.set('json_data', json.dumps(data_dict))
+        retrieved_json = self.collection.get('json_data')
+        self.assertEqual(json.loads(retrieved_json), data_dict)
+
+        # Pickle serialization
+        pickled_data = pickle.dumps(data_dict)
+        self.collection.set('pickle_data', pickled_data)
+        retrieved_pickle = self.collection.get('pickle_data')
+        self.assertEqual(pickle.loads(retrieved_pickle), data_dict)
+
+        # Complex nested structure with mixed types
+        complex_data = {
+            'nested_list': [1, 2, {'key': 'value'}, [4, 5]],
+            'tuple_data': (1, 2, 3),
+            'set_data': [1, 2, 3],  # Convert set to list for JSON compatibility
         }
 
-        for key, value in json_data.items():
-            json_collection.set(key, value)
-
-        retrieved_json_items = dict(json_collection.items())
-        self.assertEqual(retrieved_json_items, json_data)
-
-        pickle_collection = self.db.collection('pickle_items_test', serializer='pickle')
-        test_obj1 = TestClass('item1', 100)
-        test_obj2 = TestClass('item2', 200)
-        pickle_data = {'obj1': test_obj1, 'obj2': test_obj2}
-
-        for key, value in pickle_data.items():
-            pickle_collection.set(key, value)
-
-        retrieved_pickle_items = dict(pickle_collection.items())
-        self.assertEqual(len(retrieved_pickle_items), 2)
-        self.assertEqual(retrieved_pickle_items['obj1'], test_obj1)
-        self.assertEqual(retrieved_pickle_items['obj2'], test_obj2)
+        # Demonstrate serialization as best practice
+        self.collection.set('complex_json', json.dumps(complex_data))
+        retrieved_complex = json.loads(self.collection.get('complex_json'))
+        self.assertEqual(retrieved_complex['nested_list'], complex_data['nested_list'])
+        # Note: tuple becomes list in JSON serialization
+        self.assertEqual(
+            retrieved_complex['tuple_data'], list(complex_data['tuple_data'])
+        )
 
 
 if __name__ == '__main__':

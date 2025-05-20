@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-import json
-import pickle
 import sqlite3
 from pathlib import Path
 from sqlite3 import Connection
-from typing import Any, Union, List, Literal, Optional, Iterator
+from typing import Any, Union, List, Iterator
 
 
 class Collection:
@@ -13,14 +11,12 @@ class Collection:
         self,
         db: KeyVDatabase,
         name: str,
-        serializer: Optional[Literal['json', 'pickle']] = None,
     ):
         self.db = db
         self.name = name
-        self.serializer = serializer
 
     def __str__(self):
-        return f'Collection(name={self.name}, db={self.db.path}, serializer={self.serializer})'
+        return f'Collection(name={self.name}, db={self.db.path})'
 
     def __repr__(self):
         return self.__str__()
@@ -44,52 +40,6 @@ class Collection:
                 conn.commit()
             return cursor.fetchall()
 
-    def _serialize_if_provided(
-        self,
-        value: Any,
-        serializer: Optional[Literal['json', 'pickle']] = None,
-    ) -> Any:
-        """Serialize the value using the specified serializer or the collection's default serializer.
-
-        Args:
-            value: The value to serialize
-            serializer: Optional serializer to use, overrides the collection's serializer
-
-        Returns:
-            The serialized value if a serializer is specified, otherwise the original value
-        """
-        # use the provided serializer or fall back to the collection's serializer
-        effective_serializer = serializer or self.serializer
-
-        if effective_serializer == 'json':
-            return json.dumps(value).encode('utf-8')
-        elif effective_serializer == 'pickle':
-            return pickle.dumps(value)
-        return value
-
-    def _deserialize_if_provided(
-        self,
-        value: Any,
-        serializer: Optional[Literal['json', 'pickle']] = None,
-    ) -> Any:
-        """Deserialize the value using the specified serializer or the collection's default serializer.
-
-        Args:
-            value: The value to serialize
-            serializer: Optional serializer to use, overrides the collection's serializer
-
-        Returns:
-            The de  serialized value if a serializer is specified, otherwise the original value
-        """
-        # use the provided serializer or fall back to the collection's serializer
-        effective_serializer = serializer or self.serializer
-
-        if effective_serializer == 'json':
-            return json.loads(value.decode('utf-8'))
-        elif effective_serializer == 'pickle':
-            return pickle.loads(value)
-        return value
-
     def change_name(self, new_name: str) -> 'Collection':
         self._execute_sql(f'alter table {self.name} rename to {new_name}')
         self.name = new_name
@@ -99,8 +49,7 @@ class Collection:
         self,
         key: Any,
         value: Any,
-        replace_if_exists: bool = False,
-        serializer: Optional[Literal['json', 'pickle']] = None,
+        replace_if_exists: bool = True,
     ):
         """
         Inserts a key-value pair into the collection.
@@ -108,12 +57,7 @@ class Collection:
         Args:
             key: The key to insert.
             value: The value to associate with the key.
-            replace_if_exists: If True, replaces the value if the key already exists. Defaults to False.
-            serializer: The serializer to use. Defaults to None.
-                NOTE: this overwrites the serializer in the db/collection instance.
-                For example, if the db/collection instance has a serializer of 'json',
-                and you pass in this function a serializer='pickle', pickle will be used
-                for this specific key-value pair.
+            replace_if_exists: If True, replaces the value if the key already exists. If False, raises an error. Defaults to True.
 
         Raises:
             ValueError: If the key already exists and replace_if_exists is False.
@@ -123,8 +67,6 @@ class Collection:
                 self.update(key, value)
                 return
             raise ValueError(f'key {key} already exists')
-
-        value = self._serialize_if_provided(value, serializer)
 
         self._execute_sql(
             f'insert into {self.name} (key, value) values (?, ?)',
@@ -137,7 +79,6 @@ class Collection:
         key: Any,
         default: Any = None,
         raise_if_missing: bool = False,
-        serializer: Optional[Literal['json', 'pickle']] = None,
     ) -> Any:
         """
         Retrieves the value associated with the given key.
@@ -146,7 +87,6 @@ class Collection:
             key: The key to look up.
             default: The value to return if the key does not exist. Defaults to None.
             raise_if_missing: If True, raises a ValueError if the key does not exist. Defaults to False.
-            serializer: The serializer to use. Defaults to None.
 
         Returns:
             The value associated with the key, or None if the key does not exist.
@@ -155,7 +95,7 @@ class Collection:
             f'select value from {self.name} where key = ?', (key,)
         )
         if result:
-            return self._deserialize_if_provided(result[0][0], serializer)
+            return result[0][0]
         if raise_if_missing:
             raise ValueError(f'key {key} does not exist')
         return default
@@ -164,7 +104,6 @@ class Collection:
         self,
         key: Any,
         value: Any,
-        serializer: Optional[Literal['json', 'pickle']] = None,
     ):
         """
         Updates the value associated with the given key.
@@ -172,9 +111,9 @@ class Collection:
         Args:
             key: The key to update.
             value: The new value to associate with the key.
-            serializer: The serializer to use. Defaults to None.
         """
-        value = self._serialize_if_provided(value, serializer)
+        if not self.key_exists(key):
+            raise ValueError(f'key {key} does not exist')
         self._execute_sql(
             f'update {self.name} set value = ? where key = ?',
             (value, key),
@@ -200,7 +139,6 @@ class Collection:
         Returns:
             A list of keys associated with the value.
         """
-        value = self._serialize_if_provided(value)
         result = self._execute_sql(
             f'select key from {self.name} where value = ?', (value,)
         )
@@ -221,10 +159,7 @@ class Collection:
         """
         return list(self.iterkeys())
 
-    def values(
-        self,
-        serializer: Optional[Literal['json', 'pickle']] = None,
-    ) -> List[Any]:
+    def values(self) -> List[Any]:
         """
         Retrieves all values in the collection.
 
@@ -232,18 +167,12 @@ class Collection:
             Not recommended for large datasets, since this method loads all items
             into memory at once. Use `.itervalues()` instead for better memory usage.
 
-        Args:
-            serializer: The serializer to use. Defaults to None.
-
         Returns:
             A list of all values in the collection.
         """
-        return list(self.itervalues(serializer))
+        return list(self.itervalues())
 
-    def items(
-        self,
-        serializer: Optional[Literal['json', 'pickle']] = None,
-    ) -> List[tuple[Any, Any]]:
+    def items(self) -> List[tuple[Any, Any]]:
         """
         Retrieves all key-value pairs in the collection.
 
@@ -251,13 +180,10 @@ class Collection:
             Not recommended for large datasets, since this method loads all items
             into memory at once. Use `.iteritems()` instead for better memory usage.
 
-        Args:
-            serializer: The serializer to use. Defaults to None.
-
         Returns:
             A list of all key-value pairs in the collection.
         """
-        return list(self.iteritems(serializer))
+        return list(self.iteritems())
 
     def iterkeys(self) -> Iterator[Any]:
         """
@@ -272,15 +198,9 @@ class Collection:
             for row in cursor:
                 yield row[0]
 
-    def itervalues(
-        self,
-        serializer: Optional[Literal['json', 'pickle']] = None,
-    ) -> Iterator[Any]:
+    def itervalues(self) -> Iterator[Any]:
         """
         Iterates over all values in the collection.
-
-        Args:
-            serializer: The serializer to use. Defaults to None.
 
         Returns:
             An iterator over all values in the collection.
@@ -289,17 +209,11 @@ class Collection:
             cursor = conn.cursor()
             cursor.execute(f'select value from {self.name}')
             for row in cursor:
-                yield self._deserialize_if_provided(row[0], serializer)
+                yield row[0]
 
-    def iteritems(
-        self,
-        serializer: Optional[Literal['json', 'pickle']] = None,
-    ) -> Iterator[tuple[Any, Any]]:
+    def iteritems(self) -> Iterator[tuple[Any, Any]]:
         """
         Iterates over all key-value pairs in the collection.
-
-        Args:
-            serializer: The serializer to use for values. Defaults to None.
 
         Returns:
             An iterator over all key-value pairs in the collection as (key, value) tuples.
@@ -308,7 +222,7 @@ class Collection:
             cursor = conn.cursor()
             cursor.execute(f'select key, value from {self.name}')
             for key, value in cursor:
-                yield (key, self._deserialize_if_provided(value, serializer))
+                yield (key, value)
 
     def key_exists(self, key: Any) -> bool:
         """
@@ -420,25 +334,22 @@ class KeyVDatabase:
     def create_collection(
         self,
         name: str,
-        serializer: Optional[Literal['json', 'pickle']] = None,
     ) -> Collection:
         """
         Creates a new collection in the database.
 
         Args:
             name: The name of the collection.
-            serializer: The serializer to use. Defaults to None.
         Returns:
             The newly created collection instance.
         """
         self._create_table_in_db(name=name)
-        return self.collection(name=name, serializer=serializer)
+        return self.collection(name=name)
 
     def collection(
         self,
         name: str,
         create_if_not_exists: bool = True,
-        serializer: Optional[Literal['json', 'pickle']] = None,
     ) -> Collection:
         """
         Retrieves a collection by name, optionally creating it if it does not exist.
@@ -446,7 +357,6 @@ class KeyVDatabase:
         Args:
             name: The name of the collection.
             create_if_not_exists: If True, creates the collection if it does not exist. Defaults to True.
-            serializer: The serializer to use. Defaults to None.
 
         Returns:
             The collection instance.
@@ -455,10 +365,10 @@ class KeyVDatabase:
             ValueError: If the collection does not exist and create_if_not_exists is False.
         """
         if name in self.collections():
-            return Collection(db=self, name=name, serializer=serializer)
+            return Collection(db=self, name=name)
 
         if create_if_not_exists:
-            return self.create_collection(name=name, serializer=serializer)
+            return self.create_collection(name=name)
 
         raise ValueError(f'collection {name} does not exist')
 

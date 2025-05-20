@@ -1,8 +1,8 @@
 # keyv
 
-A lightweight, file-based NoSQL key-value database designed for simple and practical uses. It requires no external dependencies and stores all data locally in a single file. Perfect for applications needing a straightforward and efficient storage solution.
+Transform SQLite into a powerful and fast key-value store.
 
-keyv uses sqlite3 as its engine, thereby benefiting from its power, integrity, and practicality. This looks strange but it works like a charm.
+`keyv` is a lightweight library that turns SQLite into a NoSQL key-value database, combining the best of both worlds: the simplicity of key-value stores with the reliability of SQLite. Perfect for applications that need a robust local database without the complexity of a full DBMS.
 
 # Usage
 
@@ -22,10 +22,10 @@ collection = db.collection('my_collection')
 # insert a key-value pair
 collection.set('key1', 'value1')
 
-# by default the .set method is unique safe, i.e. it raises an error
-# if the key already exists. if you don't want that behavior you can
-# use replace_if_exists=True.
-collection.set('key1', 'value1', replace_if_exists=True)
+# by default the .set method will replace existing values
+# if you want to prevent overwriting existing keys, you can
+# use replace_if_exists=False
+collection.set('key1', 'value1', replace_if_exists=False)
 
 # retrieve a value by key
 collection.get('key1')
@@ -111,53 +111,6 @@ db.set('key1', 'value1')
 db.get('key1')
 # >>> 'value1'
 ```
-
-# Serializers
-
-keyv supports serialization of complex data types using JSON or Pickle. You can specify a serializer when creating a collection or when setting individual values.
-
-```python
-import keyv
-
-db = keyv.connect('keyv.db')
-
-# Create a collection with JSON serialization
-json_collection = db.collection('json_data', serializer='json')
-
-# Store complex data types
-json_collection.set('user', {'name': 'John', 'age': 30, 'roles': ['admin', 'user']})
-json_collection.set('config', {'debug': True, 'theme': 'dark', 'cache_size': 1024})
-
-# Retrieve data - it's automatically deserialized
-user = json_collection.get('user')
-print(user['name'])  # 'John'
-print(user['roles'])  # ['admin', 'user']
-
-# Create a collection with Pickle serialization for Python objects
-pickle_collection = db.collection('pickle_data', serializer='pickle')
-
-# Store Python objects
-class Person:
-    def __init__(self, name, age):
-        self.name = name
-        self.age = age
-
-pickle_collection.set('person1', Person('Alice', 25))
-
-# Retrieve and use the object
-person = pickle_collection.get('person1')
-print(person.name)  # 'Alice'
-
-# Override collection serializer for a specific key-value pair/methods
-json_collection.set('special_data', [1, 2, 3, 4], serializer='pickle')
-json_collection.get('special_data', serializer='pickle')
-```
-
-When using serializers:
-- JSON is good for data that needs to be human-readable or compatible with other systems
-- Pickle is better for Python-specific objects but less secure and not cross-language compatible
-- You can set a default serializer for a collection or specify one for individual operations
-- Data is automatically deserialized when retrieved
 
 # License
 
